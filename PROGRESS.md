@@ -425,3 +425,43 @@ Nenhuma implementação iniciada. Toda a sessão foi de planejamento e documenta
 
 ### Próximos passos
 - Fase 8: Piloto end-to-end (testar tudo junto com projeto real)
+
+---
+
+## Session 2026-02-26 — Phase 9: Consolidation + Pilot Fixes
+
+### What was done
+- **Consolidated everything into single GitHub repo** (github.com/bernajaber/pi-product-system)
+  - Skills, extensions, agents, constitution, guidelines, docs — all in one place
+  - install.sh / uninstall.sh for symlink-based installation
+  - Professional README with structure, install, usage docs
+  - CHANGELOG.md for release tracking
+  - .pi/AGENTS.md for system development sessions
+  - Migrated PARA-BERNARDO.md and WORKFLOW-SPEC.md to docs/
+
+- **Fixed pilot issues discovered during testing:**
+  - Agent ignored workflow → rewrote AGENTS.md template to be imperative
+  - Agent used `interview` tool instead of `ask` tool → moved ask-tool.ts to global, updated all skills
+  - Agent didn't research references → added mandatory research step to product-specify skill
+  - Model switching not reverting → removed spec-mode, review-mode, heavy-debug prompt templates
+  - Skills/extensions trapped in pi-product-system → moved to global via symlinks
+
+- **Architecture decision: Option D (file-based workflow)**
+  - No enforcement extension — AGENTS.md + skills govern the process
+  - /setup is deterministic (extension), workflow is creative (files)
+  - Aligned with operator's philosophy: simple, maintainable, extensible
+
+- **Product Constitution converted to English** (v1.1.0)
+  - All artifacts now in English, operator communication remains Portuguese
+
+### Decisions
+- Single repo replaces oh-my-pi-plan + pi-product-system + scattered ~/.pi/agent files
+- Symlinks over copies: edit in repo, changes take effect everywhere
+- ask-tool.ts restored for interactive gate approvals (uses native ctx.ui.select)
+- Option D chosen over enforcement extension — files over code for workflow control
+- /setup as extension (deterministic) not prompt template (LLM-interpreted)
+
+### Next steps
+- Complete Phase 8 pilot: test full flow with blog project
+- Clean up ~/bernardo-blog and run /setup → full workflow
+- Archive ~/oh-my-pi-plan and ~/pi-product-system (old locations)
