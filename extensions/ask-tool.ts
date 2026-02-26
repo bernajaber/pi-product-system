@@ -65,25 +65,25 @@ Use cases:
 
 					while (!done) {
 						const opts = [
-							...labels.map((l) => (selected.includes(l) ? `✓ ${l}` : `○ ${l}`)),
-							...(selected.length > 0 ? ["✅ Confirmar seleção"] : []),
-							"✏️  Escrever resposta customizada",
+							...labels.map((l) => (selected.includes(l) ? `> ${l}` : `  ${l}`)),
+							...(selected.length > 0 ? ["Confirmar seleção"] : []),
+							"Escrever resposta customizada",
 						];
 						const choice = await ctx.ui.select(q.question, opts, {
 							initialIndex: q.recommended ?? 0,
 						});
 
-						if (!choice || choice === "✅ Confirmar seleção") {
+						if (!choice || choice === "Confirmar seleção") {
 							done = true;
 							break;
 						}
-						if (choice === "✏️  Escrever resposta customizada") {
+						if (choice === "Escrever resposta customizada") {
 							const custom = await ctx.ui.input("Sua resposta:");
 							results.push({ id: q.id, selected: [], custom: custom ?? "(sem resposta)" });
 							done = true;
 							break;
 						}
-						const label = choice.replace(/^[✓○] /, "");
+						const label = choice.replace(/^[> ] {1,2}/, "");
 						if (selected.includes(label)) {
 							selected.splice(selected.indexOf(label), 1);
 						} else {
@@ -96,12 +96,12 @@ Use cases:
 					}
 				} else {
 					// Single select
-					const opts = [...labels, "✏️  Escrever resposta customizada"];
+					const opts = [...labels, "Escrever resposta customizada"];
 					const choice = await ctx.ui.select(q.question, opts, {
 						initialIndex: q.recommended ?? 0,
 					});
 
-					if (choice === "✏️  Escrever resposta customizada") {
+					if (choice === "Escrever resposta customizada") {
 						const custom = await ctx.ui.input("Sua resposta:");
 						results.push({ id: q.id, selected: [], custom: custom ?? "(sem resposta)" });
 					} else {

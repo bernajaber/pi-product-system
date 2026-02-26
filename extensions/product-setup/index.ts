@@ -191,7 +191,7 @@ export default function (pi: ExtensionAPI) {
       }
 
       // --- Step 5: Notify and hand off to agent ---
-      ctx.ui.notify("✅ Product System initialized!", "info");
+      ctx.ui.notify("Product System initialized!", "info");
 
       pi.sendUserMessage(
         `The Product System has been initialized. Files created: .pi/AGENTS.md, .pi/engineering-constitution.md, .pi/workflow-state.json, .gitignore.

@@ -44,7 +44,7 @@ If surf is not available, fall back to `curl` checks for content verification.
 For each scenario in `.pi/specs/<feature>/spec.md`:
 1. Perform the action described in the scenario
 2. Take a screenshot as evidence
-3. Record: ✅ pass or ❌ fail
+3. Record: PASS or FAIL
 
 **If ANY scenario fails:** do NOT present Gate 3. Go back to build phase, fix, and re-verify.
 
@@ -66,9 +66,9 @@ Build a checklist from the spec scenarios and present to the operator:
 Você pode testar em: [URL or localhost instruction]"
 
 Then ask the operator directly in Portuguese for approval:
-- "✅ Tudo certo, pode publicar"
-- "🔧 Preciso de ajustes (vou descrever)"
-- "❌ Não é isso, preciso repensar"
+- "Tudo certo, pode publicar"
+- "Preciso de ajustes (vou descrever)"
+- "Não é isso, preciso repensar"
 
 Use the `ask` tool to present options to the operator. Do NOT use the `interview` tool or any other form/wizard.
 

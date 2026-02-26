@@ -107,8 +107,8 @@ Present to the operator in product language:
 3. "No final: [complete experience]"
 4. DO NOT mention technology, database, framework, or programming language
 5. Ask the operator directly in Portuguese for approval:
-   - "✅ Aprovado! Pode começar a construir"
-   - "🔧 Quero ajustar a ordem ou o que entra primeiro"
-   - "❌ Voltar e repensar o que vai ser feito"
+   - "Aprovado! Pode começar a construir"
+   - "Quero ajustar a ordem ou o que entra primeiro"
+   - "Voltar e repensar o que vai ser feito"
 
 Use the `ask` tool to present options to the operator. Do NOT use the `interview` tool or any other form/wizard.

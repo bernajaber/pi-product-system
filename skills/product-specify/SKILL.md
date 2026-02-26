@@ -95,8 +95,8 @@ Present a summary covering:
 3. Key assumed decisions and their consequences
 4. What is NOT included (constraints)
 5. Use the `ask` tool to present approval options to the operator:
-   - "✅ Aprovado! Pode construir assim"
-   - "🔧 Quase, mas quero ajustar algumas coisas"
-   - "❌ Não é isso, vamos repensar"
+   - "Aprovado! Pode construir assim"
+   - "Quase, mas quero ajustar algumas coisas"
+   - "Não é isso, vamos repensar"
 
 Do NOT use the `interview` tool or any other form/wizard.

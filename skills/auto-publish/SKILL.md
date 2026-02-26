@@ -6,7 +6,7 @@ description: "After Gate 3 approval: push branch, create PR, review, merge, rese
 # Auto-Publish Skill
 
 ## When to Use
-After Gate 3 is approved ("✅ Tudo certo, pode publicar").
+After Gate 3 is approved ("Tudo certo, pode publicar").
 
 ## Process
 
@@ -143,7 +143,7 @@ git push origin main
 ```
 
 ### Step 10: Notify operator (in Portuguese)
-"Feature entregue! ✅
+"Feature entregue!
 
 [resumo do que foi construído em 1-2 frases]
 
