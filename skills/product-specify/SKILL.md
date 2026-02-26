@@ -20,15 +20,23 @@ If the operator's description implies a domain you don't fully understand:
 1. Research existing solutions in that space
 2. Understand common patterns and user expectations
 
-Show the operator what you found and confirm direction BEFORE writing the spec.
+Show the operator what you found and confirm direction BEFORE moving to Step 2.
 
-### Step 2: Clarify (if needed)
-If the description is ambiguous or missing critical details, ask the operator directly in Portuguese. Keep questions focused on PRODUCT behavior, never technology. Maximum 3-5 questions.
+### Step 2: Clarify (MANDATORY — always ask before writing the spec)
+The operator gave you a high-level description. You MUST ask questions before deciding anything. Follow the `product-clarify` skill (read `~/.pi/agent/skills/product-clarify/SKILL.md`).
 
-Do NOT use the `interview` tool or any form/wizard tool. Just ask naturally in the chat and wait for the operator's response.
+Rules:
+- Ask 3-5 questions about PRODUCT BEHAVIOR in Portuguese
+- Never ask about technology — you decide that
+- Questions must be things where the operator's answer changes what gets built
+- Wait for the operator to respond before proceeding
+- If the operator's answers reveal more ambiguities, ask ONE more round (max 2 rounds total)
+
+Only skip this step if the operator already gave extremely detailed requirements that leave no behavioral ambiguity. This is rare.
 
 ### Step 3: Specify
-1. Read the operator's description and research findings
+After research is done AND clarification questions are answered:
+1. Read the operator's description, research findings, and clarification answers
 2. Identify: core features, expected behaviors, implicit constraints
 3. Generate the spec using the template below
 4. Classify reviewDepth:
@@ -86,9 +94,9 @@ Present a summary covering:
 2. What will be built (1-2 sentences)
 3. Key assumed decisions and their consequences
 4. What is NOT included (constraints)
-5. Ask the operator directly in Portuguese for approval:
+5. Use the `ask` tool to present approval options to the operator:
    - "✅ Aprovado! Pode construir assim"
    - "🔧 Quase, mas quero ajustar algumas coisas"
    - "❌ Não é isso, vamos repensar"
 
-Use the `ask` tool to present options to the operator. Do NOT use the `interview` tool or any other form/wizard.
+Do NOT use the `interview` tool or any other form/wizard.
