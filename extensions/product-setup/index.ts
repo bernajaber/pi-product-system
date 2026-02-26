@@ -127,6 +127,37 @@ const WORKFLOW_STATE = JSON.stringify(
   2
 );
 
+const REVIEW_GUIDELINES = `# Review Guidelines
+
+> Project-specific review rules. Loaded automatically by the /review extension.
+> Updated by auto-plan with technical decisions after Gate 2.
+
+## Product Principles (always apply)
+
+- Every feature, button, and function must have a clear reason to exist. If not obvious, flag it.
+- Visual interface must be flawless: alignment, spacing, typography, visual hierarchy. No "close enough."
+- Never appear slow. Every user action must have immediate visual feedback (< 100ms).
+- No broken state visible to the user. Edge cases handled: empty inputs, network errors, impossible states.
+- Less is more. If it needs a tutorial, it's too complex. If 3 options suffice, don't offer 10.
+- Minimal dependencies: if doable in 20 lines of vanilla code, no library.
+- No premature abstraction. Duplication is better than the wrong abstraction.
+- Local first. No tracking, no hidden telemetry. User data must be exportable.
+
+## Code Review Focus
+
+- Flag dead code, unused imports, and leftover debug statements
+- Flag inconsistent naming or file organization
+- Flag missing error handling for user-facing operations
+- Flag accessibility issues in UI code (missing alt text, keyboard navigation, contrast)
+- Flag hardcoded values that should be constants or configuration
+- Prefer fail-fast behavior over logging-and-continue patterns
+
+## Technical Standards
+
+<!-- AUTO-PLAN UPDATES THIS SECTION after Gate 2 -->
+<!-- Stack, architecture, and project-specific rules go here -->
+`;
+
 const GITIGNORE = `node_modules/
 dist/
 .DS_Store
@@ -172,11 +203,13 @@ export default function (pi: ExtensionAPI) {
       const agentsPath = path.join(piDir, "AGENTS.md");
       const engConstPath = path.join(piDir, "engineering-constitution.md");
       const workflowPath = path.join(piDir, "workflow-state.json");
+      const reviewGuidelinesPath = path.join(cwd, "REVIEW_GUIDELINES.md");
       const gitignorePath = path.join(cwd, ".gitignore");
 
       fs.writeFileSync(agentsPath, AGENTS_MD);
       fs.writeFileSync(engConstPath, ENGINEERING_CONSTITUTION);
       fs.writeFileSync(workflowPath, WORKFLOW_STATE);
+      fs.writeFileSync(reviewGuidelinesPath, REVIEW_GUIDELINES);
 
       if (!fs.existsSync(gitignorePath)) {
         fs.writeFileSync(gitignorePath, GITIGNORE);
@@ -194,7 +227,7 @@ export default function (pi: ExtensionAPI) {
       ctx.ui.notify("Product System initialized!", "info");
 
       pi.sendUserMessage(
-        `The Product System has been initialized. Files created: .pi/AGENTS.md, .pi/engineering-constitution.md, .pi/workflow-state.json, .gitignore.
+        `The Product System has been initialized. Files created: .pi/AGENTS.md, .pi/engineering-constitution.md, .pi/workflow-state.json, REVIEW_GUIDELINES.md, .gitignore.
 
 Ask the operator IN PORTUGUESE: **"Tudo pronto! O que você quer construir?"**
 

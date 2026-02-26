@@ -99,6 +99,32 @@ For static HTML/JS apps: tests can use a headless approach (parse the HTML, simu
 
 If the app is purely visual with no testable logic (e.g., a static landing page), the test task should at minimum validate that the HTML files exist, are well-formed, and contain expected content.
 
+## MANDATORY: Update REVIEW_GUIDELINES.md
+
+After creating the plan and BEFORE presenting Gate 2, update the `REVIEW_GUIDELINES.md` file in the project root.
+
+Replace the `<!-- AUTO-PLAN UPDATES THIS SECTION after Gate 2 -->` comment in the "Technical Standards" section with project-specific rules based on the plan. Include:
+
+1. **Stack**: what language, runtime, and frameworks are used (and what is NOT used)
+2. **Architecture**: file organization conventions, naming patterns
+3. **Patterns**: preferred patterns for this project (e.g., "no classes, use plain functions", "CSS custom properties for theming")
+4. **Testing**: how tests are structured and run
+5. **Build**: how to build and serve the project
+
+Example:
+```markdown
+## Technical Standards
+
+- Stack: vanilla HTML/CSS/JS, no frameworks, no build tools beyond a simple script
+- CSS: custom properties for theming, mobile-first, BEM-lite naming
+- JS: ES modules, no transpilation, plain functions (no classes)
+- Tests: Node.js assert, run via `node tests/<file>.js`
+- Build: `node build.js` generates static HTML from markdown
+- File naming: lowercase-kebab-case for all files
+```
+
+Do NOT remove the existing "Product Principles" and "Code Review Focus" sections. Only update "Technical Standards".
+
 ## Gate 2 Presentation (in Portuguese to operator)
 
 Present to the operator in product language:
