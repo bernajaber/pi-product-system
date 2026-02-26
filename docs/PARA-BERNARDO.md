@@ -1,12 +1,12 @@
-# Para Bernardo — O Que Estamos Construindo e Por Quê
+# Para Bernardo — Como o Sistema Funciona
 
-> **Este documento é para você.** Não tem código, não tem jargão. Explica o sistema em linguagem de produto para você entender o que está sendo construído, como vai funcionar e o que esperar de cada parte.
+> **Este documento é para você.** Não tem código, não tem jargão. Explica o sistema em linguagem de produto para você entender como funciona e o que esperar de cada parte.
 
 ---
 
 ## A ideia em uma frase
 
-Estamos construindo um sistema onde você descreve o que quer criar em português, e um agente de software constrói, testa, revisa e publica — com 3 momentos de aprovação sua e zero comandos técnicos.
+Você descreve o que quer criar em português, e um agente de software constrói, testa, revisa e publica — com 3 momentos de aprovação sua e zero comandos técnicos.
 
 ---
 
@@ -26,45 +26,52 @@ Tudo o mais — escolha de tecnologia, construção, testes, revisão, deploy �
 
 ## Como vai parecer na prática
 
-Você abre o terminal, digita `pi`, e começa a conversar em português:
+Você cria uma pasta para o projeto, abre o Pi, digita `/setup`, e começa a conversar em português:
 
 ```
-Você: "Quero criar um app de lista de compras onde eu e a Helena 
+/setup
+
+[Sistema inicializado. Pi pergunta:]
+"Tudo pronto! O que você quer construir?"
+
+Você: "Quero criar um app de lista de compras onde eu e a Helena
        possamos adicionar itens e marcar como comprado em tempo real"
 
-Agente: "Entendi! Antes de começar, tenho 2 dúvidas:
+Agente: "Entendi! Antes de começar, preciso confirmar duas coisas:
          As listas são por categoria (feira, farmácia...) ou uma lista única?
          Quando você marca algo como comprado, ele some da lista ou fica riscado?"
-         
+
          [Você pressiona Ctrl+. e responde no formulário que aparece]
          "Lista única. Fica riscado."
 
+         [Ou simplesmente responde no chat, se preferir]
+
 Agente: "Perfeito. Aqui está o que vou construir:
-         
+
          ✓ Lista única compartilhada entre você e a Helena
          ✓ Adicionar e remover itens
          ✓ Marcar como comprado (fica riscado)
          ✓ Mudanças aparecem para os dois em tempo real
          ✓ Funciona no celular sem precisar instalar nada
-         
+
          Decisões que tomei sozinho:
          - Não funciona sem internet (mais simples e confiável)
          - Qualquer um dos dois pode editar qualquer item
-         
+
          Isso está correto?
          ○ Sim, está correto
          ○ Preciso corrigir algo
          ○ Quero adicionar cenários"
-         
+
 [Você clica "Sim, está correto"]
 
 Agente: "Vou construir em 2 etapas:
          1. Lista básica (adicionar, marcar, visualizar)
          2. Compartilhamento em tempo real com a Helena
-         
+
          ○ Sim, pode começar
          ○ Quero ajustar o escopo antes"
-         
+
 [Você clica "Sim, pode começar"]
 
 [Agente trabalha autonomamente por alguns minutos]
@@ -74,31 +81,48 @@ Agente: "Lista básica pronta. Construindo compartilhamento..."
 [Mais alguns minutos]
 
 Agente: "Pronto para você validar! 🎉
-         
-         Teste aqui: https://lista-preview.vercel.app
-         
+
+         Teste aqui: http://localhost:4321
+
          Checklist do que fazer:
          □ Criar uma lista
          □ Adicionar 3 itens
          □ Marcar um como comprado (deve ficar riscado)
-         □ Abrir o mesmo link em outro aba ou celular e ver as mudanças aparecerem
-         
+         □ Abrir o mesmo link em outra aba ou celular e ver as mudanças aparecerem
+
          ○ Tudo certo, pode publicar
          ○ Preciso de ajustes
          ○ Não é isso, precisa repensar"
-         
+
 [Você testa e clica "Tudo certo, pode publicar"]
 
 Agente: "Publicado! 🎉
          https://lista-compras.vercel.app
-         
+
          O que foi entregue: sistema de lista compartilhada com marcação em tempo real
          Versão: v0.1.0
-         
+
          Quer adicionar algo mais?"
 ```
 
 É isso. Do início ao fim: 6 respostas suas + 3 cliques nos gates.
+
+---
+
+## Como responder às perguntas do agente
+
+O agente faz perguntas de produto em linguagem natural. Você tem duas formas de responder:
+
+### Opção A — Resposta no chat
+Simplesmente digitando no chat. Funciona bem para respostas curtas.
+
+### Opção B — Ctrl+. (formulário interativo)
+Para respostas mais longas ou quando o agente fizer várias perguntas de uma vez, pressione **Ctrl+.** — um formulário aparece com cada pergunta em um campo separado. Você preenche, confirma, e as respostas chegam ao agente de forma organizada.
+
+**Use Ctrl+. quando:**
+- O agente fizer 2 ou mais perguntas de uma vez
+- Quiser organizar respostas longas
+- Quiser revisar o que escreveu antes de enviar
 
 ---
 
@@ -120,10 +144,10 @@ Agente: "Publicado! 🎉
 
 ### Parte 2 — O Processo (o que garante a qualidade)
 
-São as 8 fases que o agente segue para toda feature:
+São as fases que o agente segue para toda feature:
 
 **Fase 1 — Entender (specification)**
-O agente transforma o que você descreveu em uma especificação estruturada com cenários de teste. Você não vê isso — é trabalho interno.
+O agente pesquisa referências (se você mencionou alguma), transforma o que você descreveu em uma especificação estruturada com cenários de teste. Você não vê isso — é trabalho interno.
 
 **Fase 2 — Clarificar (clarification)**
 Se houver ambiguidades, o agente pergunta — mas só sobre comportamento do produto, nunca sobre tecnologia. "O item some ou fica riscado?" é uma boa pergunta. "Devo usar localStorage ou IndexedDB?" nunca aparece.
@@ -144,7 +168,7 @@ O agente constrói em loop: implementa, testa, corrige se falhar, passa para a p
 Antes de mostrar para você, o agente revisa o próprio trabalho como se fosse um segundo revisor vendo o código pela primeira vez. Bugs encontrados são corrigidos nesta fase. Você nunca vê trabalho incompleto.
 
 **Gate 3 — Validação**
-URL de preview + checklist do que testar. Você usa o produto e decide: publicar, ajustar, ou repensar.
+Checklist do que testar + instruções para rodar localmente (ou URL de preview). Você usa o produto e decide: publicar, ajustar, ou repensar.
 
 **Fase 6 — Publicar (publishing)**
 Merge, versão, changelog, deploy. Automático após sua aprovação.
@@ -159,6 +183,7 @@ São os componentes instalados que dão superpoderes ao agente:
 |---|---|
 | **Loop de build** | Agente fica construindo features até todas estarem prontas, sem precisar de intervenção |
 | **Self-review** | Agente revisa o próprio trabalho antes de apresentar. Usa um sistema de prioridades (crítico, urgente, normal, sugestão) |
+| **Ctrl+.** | Formulário interativo para você responder perguntas do agente de forma organizada |
 | **Verificação local** | Agente testa o app no computador antes de qualquer deploy |
 | **Sub-agentes** | Quando preso num problema, lança um "assistente" para diagnosticar sem o viés do histórico |
 | **Troca de modelo** | Usa modelos mais baratos para tarefas simples e modelos mais poderosos para debugging difícil |
@@ -195,7 +220,7 @@ Você tem 2 opções: aprovar ou ajustar o escopo.
 ### Gate 3 — "Funcionou como esperado?"
 
 O agente apresenta:
-- URL de preview para você testar
+- Instruções para testar localmente (ou URL de preview)
 - Checklist dos cenários para testar
 - O que foi construído (em linguagem de produto)
 
@@ -217,27 +242,53 @@ Você tem 3 opções: publicar, pedir ajustes, ou repensar.
 - ✅ Mudanças de escopo são tratadas com processo, não improvisação
 
 ### O sistema não garante:
-- ❌ Que você vai gostar do design (isso depende da Product Constitution que você definir)
+- ❌ Que você vai gostar do design (isso depende da Product Constitution que você definiu)
 - ❌ Que o produto vai ter sucesso de mercado (isso é sua responsabilidade de produto)
 - ❌ Zero iterações no Gate 3 (às vezes o que você imaginava é diferente do que foi construído)
 - ❌ Performance perfeita para escala massiva (o sistema é para MVPs e produtos menores)
 
 ---
 
-## A Product Constitution — o único documento que você define
+## A Product Constitution — seus princípios de produto
 
-É o único texto técnico que você vai criar no sistema inteiro. São seus princípios de produto: como você quer que os produtos que construir se comportem.
+Está em `~/.pi/agent/product-constitution.md`. É o único documento que define como você quer que os produtos se comportem.
 
-Não precisa ser formal. O agente vai fazer perguntas e capturar a partir das suas respostas.
+O agente lê ela automaticamente no início de todo projeto. Ela governa decisões de design, qualidade e arquitetura sem você precisar repetir suas preferências.
 
-**Exemplos do que vai ter:**
-- "O usuário nunca deve ver uma mensagem de erro técnica"
-- "Todo produto deve funcionar bem no celular"
-- "Prefiro entregar rápido e simples do que esperar pelo perfeito"
-- "Dados do usuário são sagrados — nunca perder, sempre poder desfazer"
-- "Me mostre um checklist do que foi feito, não o código"
+Se quiser ajustar algum princípio, edite diretamente o arquivo. As mudanças valem para todos os projetos a partir da próxima sessão.
 
-Uma vez definida, o agente segue esses princípios automaticamente em todos os projetos. Você só precisa fazer isso uma vez.
+---
+
+## Como iniciar um novo projeto
+
+```bash
+mkdir ~/nome-do-projeto
+cd ~/nome-do-projeto
+pi
+```
+
+Quando o Pi abrir, digite:
+
+```
+/setup
+```
+
+O sistema inicializa a estrutura do projeto e pergunta: *"Tudo pronto! O que você quer construir?"*
+
+Descreva em português o que quer criar. O agente segue o workflow automaticamente a partir daí.
+
+---
+
+## Como retomar um projeto existente
+
+Se o projeto já tem `.pi/AGENTS.md` de uma sessão anterior:
+
+```bash
+cd ~/nome-do-projeto
+pi
+```
+
+Basta abrir o Pi na pasta do projeto. O agente lê o estado automaticamente e continua de onde parou.
 
 ---
 
@@ -284,26 +335,11 @@ Para aprender o sistema sem pressão, construir nesta ordem:
 
 ---
 
-## Como iniciar uma sessão de trabalho
-
-```
-cd ~/oh-my-pi-plan
-pi
-```
-
-Quando o Pi abrir, digite apenas:
-
-> **"Nova sessão."**
-
-O agente lê os arquivos do projeto, te conta onde está e o que vai fazer. Você confirma e ele começa. Se você quiser direcionar a sessão para algo específico, pode dizer: *"Nova sessão. Quero focar na Fase 2 hoje."*
-
----
-
 ## O que você não vai precisar fazer nunca
 
 Para ficar claro o que o sistema cuida por você:
 
-- ❌ Nunca digitar um comando de terminal (exceto abrir o Pi)
+- ❌ Nunca digitar um comando de terminal (exceto abrir o Pi e `/setup` uma vez por projeto)
 - ❌ Nunca ler um diff de código
 - ❌ Nunca escolher entre frameworks ou bibliotecas
 - ❌ Nunca configurar servidores ou bancos de dados
@@ -313,22 +349,4 @@ Para ficar claro o que o sistema cuida por você:
 - ❌ Nunca configurar CI/CD
 - ❌ Nunca depurar um erro técnico
 
-Tudo isso é responsabilidade do agente. Sua responsabilidade é: descrever o que quer, aprovar nos gates, e validar que funcionou.
-
----
-
-## Cronograma de construção do sistema
-
-O sistema em si está sendo construído em fases. Aqui está o que cada fase entrega para você:
-
-| Fase | O que você ganha |
-|---|---|
-| **Fase 1 (Sistema nervoso)** | Agente não esquece entre sessões |
-| **Fase 2 (Interação)** | Gates com opções clicáveis |
-| **Fase 3 (Skills)** | Agente sabe como fazer cada fase do processo |
-| **Fase 4 (Build loop)** | Construção automática + self-review |
-| **Fase 5 (Release)** | Publicação automática com changelog |
-| **Fase 7 (Constitution)** | Agente segue seus princípios de produto |
-| **Fase 8 (Piloto)** | **Primeiro projeto real do sistema** |
-
-O piloto (Fase 8) é o site pessoal com blog. A partir daí, o sistema está pronto para qualquer projeto.
+Tudo isso é responsabilidade do agente. Sua responsabilidade é: descrever o que quer, responder as dúvidas (no chat ou via Ctrl+.), aprovar nos gates, e validar que funcionou.
