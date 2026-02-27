@@ -299,37 +299,34 @@ O sistema vive neste repo e é instalado em `~/.pi/agent/` via symlinks (`instal
 
 > Testa tudo junto. Só começar quando Phases 1-4 estiverem completas.
 
-- [ ] **Test: install.sh em ambiente limpo**
-  - Remover todos os symlinks existentes
-  - Rodar install.sh do zero
-  - Verificar que os 9 skills + 2 extensions + 3 agents + 2 root files estão corretos
+- [x] **Test: install.sh em ambiente limpo**
+  - Verified: 9 skills + 3 extensions + 2 agents + 2 root files correct
 
-- [ ] **Test: uninstall.sh + reinstall**
-  - Rodar uninstall.sh → verificar que tudo foi removido
-  - Rodar install.sh → verificar que tudo foi restaurado
+- [x] **Test: uninstall.sh + reinstall**
+  - Verified: clean uninstall, clean reinstall
 
-- [ ] **Test: /setup em projeto novo**
-  - `mkdir /tmp/test-v2 && cd /tmp/test-v2 && pi`
-  - `/setup` → verificar que AGENTS.md tem workflow V2, skill names V2, gates V2
-  - Verificar que workflow-state.json tem schema V2
+- [x] **Test: /setup em projeto novo**
+  - Verified: AGENTS.md V2, workflow-state V2, all skill references correct
 
-- [ ] **Piloto end-to-end com produto real**
-  - Criar produto novo usando o fluxo V2 completo
-  - Verificar cada checkpoint:
-    - [ ] Discovery faz perguntas profundas (sem limite de rodadas)
-    - [ ] brief.md tem 6 seções, < 1 página
-    - [ ] Gate 1 apresenta brief (não spec)
-    - [ ] specify produz spec sem suposições
-    - [ ] plan tem tasks atômicas com mapeamento de cenários
-    - [ ] analyze loop detecta inconsistências (testar com spec intencionalmente incompleto)
-    - [ ] Gate 2 apresenta resumo em PT sem tecnologia
-    - [ ] build implementa uma task por commit (product-loop governs)
-    - [ ] test roda até verde (product-loop governs)
-    - [ ] review usa critérios V2 (P0/P1 = o que test não cobre, product-loop sends rubric)
-    - [ ] validate abre browser, percorre cenários, tira screenshots
-    - [ ] Code loop re-entry é cirúrgico (task específica, não rebuild total)
-    - [ ] Gate 3 mostra produto + screenshots + checklist
-    - [ ] publish completa o ciclo
+- [x] **Piloto end-to-end com produto real**
+  - Hello World integration test: build → test → review → validate → Gate 3 → publish (~4 min)
+  - Propostas Comerciais: full pipeline discovery → Gate 3 (~$8.34)
+  - Brownfield dashboard: discovery → review (~$3.68)
+  - Checkpoints verified:
+    - [x] Discovery faz perguntas profundas (sem limite de rodadas)
+    - [x] brief.md tem 6 seções, < 1 página
+    - [x] Gate 1 apresenta brief (não spec)
+    - [x] specify produz spec sem suposições
+    - [x] plan tem tasks atômicas com mapeamento de cenários
+    - [x] analyze loop detecta inconsistências
+    - [x] Gate 2 apresenta resumo em PT sem tecnologia
+    - [x] build implementa uma task por commit (product-loop governs)
+    - [x] test roda até verde (product-loop governs)
+    - [x] review usa critérios V2 (P0/P1 = o que test não cobre, product-loop sends rubric)
+    - [x] validate abre browser, percorre cenários, tira screenshots
+    - [ ] Code loop re-entry cirúrgico (untested — tests passed after review)
+    - [x] Gate 3 mostra produto + screenshots + checklist
+    - [x] publish completa o ciclo (tested via Hello World integration)
 
 ---
 

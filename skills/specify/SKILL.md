@@ -56,17 +56,6 @@ Save to `.pi/specs/<feature>/spec.md` using the template below.
 ### Step 5: Update state
 
 Update `workflow-state.json`: set `currentPhase: "plan"`.
-Populate `.pi/feature-list.json` with each acceptance scenario:
-
-```json
-[
-  { "name": "User can add an item to the list", "passes": false },
-  { "name": "Empty state shows helpful message", "passes": false },
-  { "name": "When item text is empty, shows error", "passes": false }
-]
-```
-
-Each entry maps to an acceptance scenario from the spec. The `passes` field starts as `false` and is set to `true` by the `publish` skill when the feature is released.
 
 ## spec.md Template
 

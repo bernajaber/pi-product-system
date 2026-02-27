@@ -15,7 +15,10 @@ rm -rf "$TARGET"
 mkdir -p "$TARGET/.pi/specs/hello-world"
 
 # ---------------------------------------------------------------------------
-# .pi/AGENTS.md — exact copy from product-setup/index.ts
+# .pi/AGENTS.md — MUST MATCH the AGENTS_MD template in product-setup/index.ts
+# If the template changes, update this fixture. Verify with:
+#   diff <(sed -n '/^const AGENTS_MD/,/^`;$/p' extensions/product-setup/index.ts) \
+#        test/integration/setup-hello-world.sh
 # ---------------------------------------------------------------------------
 cat > "$TARGET/.pi/AGENTS.md" << 'AGENTS_EOF'
 # Product System — Active Project
@@ -105,7 +108,7 @@ Use skill `publish` (read `~/.pi/agent/skills/publish/SKILL.md`).
 
 ## References
 - Product Constitution: `~/.pi/agent/product-constitution.md`
-- Review Guidelines: `~/.pi/agent/REVIEW_GUIDELINES.md`
+- Review Guidelines: `REVIEW_GUIDELINES.md` (project root — customized by the plan skill with tech standards)
 - Engineering Constitution: `.pi/engineering-constitution.md`
 
 ## Product Context
@@ -185,15 +188,6 @@ cat > "$TARGET/.pi/workflow-state.json" << 'WS_EOF'
   "failureCount": 0
 }
 WS_EOF
-
-# ---------------------------------------------------------------------------
-# .pi/feature-list.json
-# ---------------------------------------------------------------------------
-cat > "$TARGET/.pi/feature-list.json" << 'FL_EOF'
-[
-  { "id": "hello-world", "name": "Hello World Page", "status": "active" }
-]
-FL_EOF
 
 # ---------------------------------------------------------------------------
 # .pi/specs/hello-world/brief.md

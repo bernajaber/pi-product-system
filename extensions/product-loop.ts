@@ -31,7 +31,8 @@ import * as path from "node:path";
 const AUTONOMOUS_PHASES = ["build", "test", "review"];
 
 // Phases where the agent needs a one-time nudge to follow the workflow
-const GUIDED_PHASES = ["idle", "init"];
+// Only "init" — this is the phase after /setup and after publish resets.
+const GUIDED_PHASES = ["init"];
 
 const MAX_REVIEW_CYCLES = 3;
 
@@ -391,6 +392,7 @@ export default function productLoop(pi: ExtensionAPI): void {
 				stuckCount: 0,
 				turnCount: 0,
 				reviewCycles: 0,
+				guidedNudgeSent: loopState.guidedNudgeSent,
 			};
 		}
 
@@ -499,10 +501,22 @@ export default function productLoop(pi: ExtensionAPI): void {
 		}
 	});
 
-	// --- Session switch: restore state ---
+	// --- Session switch: restore state and resume if autonomous ---
 	pi.on("session_switch", async (_event, ctx) => {
 		loopState = loadState(ctx);
 		const ws = readWorkflowState(ctx.cwd);
 		updateWidget(ctx, ws, loopState);
+
+		// Resume autonomous loop on switch (same logic as session_start)
+		if (ws && AUTONOMOUS_PHASES.includes(ws.currentPhase)) {
+			loopState.active = true;
+			loopState.phase = ws.currentPhase;
+			persistState();
+
+			const followUp = phaseFollowUp(ws, ws.progress, loopState, ctx.cwd);
+			if (followUp) {
+				sendFollowUp(followUp);
+			}
+		}
 	});
 }

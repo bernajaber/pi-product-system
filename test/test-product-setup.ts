@@ -258,6 +258,52 @@ async function runTests() {
 		fs.rmSync(dir, { recursive: true, force: true });
 	});
 
+	console.log("\nIdempotency guard:");
+
+	await test("/setup refuses to run in existing project", async () => {
+		const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pi-setup-test-"));
+		const { pi, commands, messages } = createMockPi();
+		productSetup(pi as any);
+
+		const piAgentDir = path.join(process.env.HOME || "~", ".pi", "agent");
+		if (!fs.existsSync(path.join(piAgentDir, "product-constitution.md"))) {
+			fs.rmSync(dir, { recursive: true, force: true });
+			return;
+		}
+
+		// First run — should succeed
+		await commands["setup"].handler("", { cwd: dir, ui: { notify: () => {} } });
+		assert.ok(messages.length > 0, "first run should send a message");
+
+		// Write something to AGENTS.md that would be lost on overwrite
+		const agentsPath = path.join(dir, ".pi", "AGENTS.md");
+		const originalContent = fs.readFileSync(agentsPath, "utf-8");
+		fs.writeFileSync(agentsPath, originalContent + "\n## Product Context\nThis is my product.");
+
+		// Second run — should refuse
+		const notifications: Array<{ msg: string; level: string }> = [];
+		messages.length = 0;
+		await commands["setup"].handler("", {
+			cwd: dir,
+			ui: { notify: (msg: string, level: string) => notifications.push({ msg, level }) },
+		});
+
+		// Should NOT have sent a follow-up message (refused to run)
+		assert.strictEqual(messages.length, 0, "second run should not send follow-up");
+
+		// Should have shown an error notification
+		assert.ok(
+			notifications.some((n) => n.level === "error" && n.msg.includes("already initialized")),
+			"should show error about existing project"
+		);
+
+		// AGENTS.md should NOT be overwritten
+		const afterContent = fs.readFileSync(agentsPath, "utf-8");
+		assert.ok(afterContent.includes("This is my product."), "AGENTS.md should not be overwritten");
+
+		fs.rmSync(dir, { recursive: true, force: true });
+	});
+
 	// ─── SUMMARY ────────────────────────────────────────────────────────────
 
 	console.log(`\n═══ Results: ${passCount}/${testCount} passed, ${failCount} failed ═══\n`);

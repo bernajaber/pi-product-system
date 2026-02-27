@@ -110,8 +110,6 @@ git tag v<new-version>
 
 Versioning: patch for simple features, minor for medium, major for breaking changes.
 
-**feature-list.json** — mark completed feature as `"passes": true`
-
 **workflow-state.json** — reset for next cycle:
 ```json
 {
@@ -136,19 +134,6 @@ Versioning: patch for simple features, minor for medium, major for breaking chan
 - <bugs fixed during review, if any>
 ```
 If CHANGELOG.md doesn't exist, create it with a `# Changelog` header.
-
-**progress.md** — add completion entry:
-```markdown
-## Session: <feature name> delivered
-### What was done
-- <summary of what was built>
-- PR: #<number>
-- Version: v<new-version>
-### Current state
-- currentPhase: init (ready for next feature)
-### Next steps
-- Waiting for operator to describe the next feature
-```
 
 ### Step 8: Final commit and push
 

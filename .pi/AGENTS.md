@@ -53,7 +53,7 @@ Products are NOT built here. Each product gets its own folder and git repo:
 |-----------|----------|---------|
 | Skills | `skills/` | 9 workflow steps (discovery → publish) |
 | Extensions | `extensions/` | `/setup` command, `ask` tool for gates |
-| Agents | `agents/` | Sub-agents: reviewer, scout, spec-checker |
+| Agents | `agents/` | Sub-agents: scout, spec-checker |
 | Constitution | `product-constitution.md` | Operator's product principles |
 | Guidelines | `REVIEW_GUIDELINES.md` | V2 review severity (P0-P3) |
 | Architecture | `docs/ARCHITECTURE-V2.md` | Complete V2 specification |

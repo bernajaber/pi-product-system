@@ -75,7 +75,7 @@ Then type `/setup`. The system initializes and asks: "O que você quer construir
 ```
 skills/           → 9 workflow skills (SKILL.md each)
 extensions/       → /setup command + ask tool for gates
-agents/           → sub-agents: reviewer, scout, spec-checker
+agents/           → sub-agents: scout, spec-checker
 product-constitution.md  → operator's product principles
 REVIEW_GUIDELINES.md     → V2 review criteria (P0-P3)
 docs/ARCHITECTURE-V2.md  → complete V2 specification
@@ -105,15 +105,15 @@ Removes all symlinks. Pi works normally without the product system.
 
 ## Testing
 
-### Unit tests (39 tests, ~2 seconds)
+### Unit tests (37 tests, ~2 seconds)
 
 Tests the logic of all 3 extensions with mocks — no pi session needed.
 
 ```bash
 cd ~/pi-product-system-repo
-node --experimental-strip-types test/test-product-loop.ts   # 24 tests
-node --experimental-strip-types test/test-product-setup.ts  # 7 tests
-node --experimental-strip-types test/test-ask-tool.ts       # 8 tests
+node --experimental-strip-types test/test-product-loop.ts   # 23 tests
+node --experimental-strip-types test/test-product-setup.ts  # 8 tests
+node --experimental-strip-types test/test-ask-tool.ts       # 6 tests
 ```
 
 Requires Node.js v22+ (for `--experimental-strip-types`).

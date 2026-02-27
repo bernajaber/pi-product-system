@@ -95,7 +95,7 @@ Use skill \`publish\` (read \`~/.pi/agent/skills/publish/SKILL.md\`).
 
 ## References
 - Product Constitution: \`~/.pi/agent/product-constitution.md\`
-- Review Guidelines: \`~/.pi/agent/REVIEW_GUIDELINES.md\`
+- Review Guidelines: \`REVIEW_GUIDELINES.md\` (project root — customized by the plan skill with tech standards)
 - Engineering Constitution: \`.pi/engineering-constitution.md\`
 
 ## Product Context
@@ -264,6 +264,17 @@ export default function (pi: ExtensionAPI) {
         return;
       }
 
+      // --- Pre-check: Refuse to overwrite existing project ---
+      const piDir = path.join(cwd, ".pi");
+      const workflowPath = path.join(piDir, "workflow-state.json");
+      if (fs.existsSync(workflowPath)) {
+        ctx.ui.notify(
+          "This project is already initialized (workflow-state.json exists). /setup cannot run again — it would destroy existing state.",
+          "error"
+        );
+        return;
+      }
+
       // --- Step 1: Git ---
       const gitDir = path.join(cwd, ".git");
       if (!fs.existsSync(gitDir)) {
@@ -274,15 +285,13 @@ export default function (pi: ExtensionAPI) {
       }
 
       // --- Step 2: Create .pi/ structure ---
-      const piDir = path.join(cwd, ".pi");
       const specsDir = path.join(piDir, "specs");
       fs.mkdirSync(piDir, { recursive: true });
       fs.mkdirSync(specsDir, { recursive: true });
 
-      // --- Step 3: Write immutable files ---
+      // --- Step 3: Write files ---
       const agentsPath = path.join(piDir, "AGENTS.md");
       const engConstPath = path.join(piDir, "engineering-constitution.md");
-      const workflowPath = path.join(piDir, "workflow-state.json");
       const reviewGuidelinesPath = path.join(cwd, "REVIEW_GUIDELINES.md");
       const gitignorePath = path.join(cwd, ".gitignore");
 

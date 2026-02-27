@@ -127,7 +127,13 @@ pkill -f "node server.js" 2>/dev/null || true
   1. Increment `codeLoop.cycle` by 1
   2. Set `codeLoop.lastFailedScenario` to the scenario description that failed
   3. Check: if `codeLoop.cycle > codeLoop.maxCycles` → escalate to operator (see Escalation below). Stop here.
-  4. Launch the `scout` agent (via pi-subagents) to diagnose root cause and map to a plan task
+  4. Launch the `scout` agent to diagnose root cause:
+     ```
+     subagent({
+       agent: "scout",
+       task: "Scenario failed: [description]. Investigate root cause.\n\nSpec: [paste spec.md]\nPlan: [paste plan.md]"
+     })
+     ```
   5. Set `codeLoop.lastDiagnosis` to the scout's root cause description
   6. Set `codeLoop.lastReentryTask` to the mapped task (or `null` if systemic)
   7. Set `currentPhase: "build"` — this triggers the product-loop extension, which detects surgical fix mode from `codeLoop.lastFailedScenario` and sends targeted build instructions

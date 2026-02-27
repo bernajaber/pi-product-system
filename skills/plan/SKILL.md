@@ -73,8 +73,8 @@ Save to `.pi/specs/<feature>/plan.md` using the template below.
 ### Step 7: Update state
 
 Update `workflow-state.json`:
-- Set `feature.id`, `feature.name`, `feature.branch`
 - Set `currentPhase: "analyze"`
+- Verify `feature` field is already set (string, e.g., `"shopping-list"` — set by discovery in Step 0)
 
 ## plan.md Template
 
@@ -111,8 +111,8 @@ project-root/
 
 ### Task N: Write automated tests
 - **What**: Create test files covering all acceptance scenarios from the spec
-- **Files**: `tests/<feature>.test.js` (create)
-- **Done when**: `node tests/<feature>.test.js` exits with code 0
+- **Files**: `tests/<feature>.test.js` (or equivalent for the chosen stack)
+- **Done when**: Tests exit with code 0
 - **Scenarios covered**: All acceptance scenarios
 
 ## Review Depth: [simple|medium|complex]

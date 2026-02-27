@@ -166,21 +166,10 @@ async function runTests() {
 
 	console.log("\nKill switch:");
 
-	await test("WORKFLOW_DISABLED=true prevents registration", async () => {
-		const prevVal = process.env.WORKFLOW_DISABLED;
-		process.env.WORKFLOW_DISABLED = "true";
-
-		const { pi, tools } = createMockPi();
-		// Need to re-import to get fresh module... but ES modules are cached.
-		// Instead, test the behavior conceptually by checking the code.
-		// The kill switch is checked at module level, so we test it differently.
-		const mod2 = await import("../extensions/ask-tool.ts");
-		// Since the module is cached, this won't re-execute. Skip this test.
-		console.log("    ⚠️  Skipping: ES module caching prevents kill switch re-test");
-		passCount++; // Count as pass since we know the code path exists
-
-		process.env.WORKFLOW_DISABLED = prevVal;
-	});
+	// NOTE: WORKFLOW_DISABLED kill switch cannot be tested via import because
+	// ES modules are cached. The code path is verified by reading the source:
+	// `if (process.env.WORKFLOW_DISABLED === "true") return;` at line 5.
+	// No test registered — avoids inflating the pass count.
 
 	// ─── SUMMARY ────────────────────────────────────────────────────────────
 

@@ -430,25 +430,9 @@ async function runTests() {
 		cleanupDir(dir);
 	});
 
-	// ─── GUIDED PHASES (idle/init) ──────────────────────────────────────────
+	// ─── GUIDED PHASES (init) ───────────────────────────────────────────────
 
-	console.log("\nGuided phases (idle/init):");
-
-	await test("session_start with idle phase → nudge with triggerTurn=false", async () => {
-		const dir = createTempDir();
-		const { pi, handlers, messages, entries } = createMockPi();
-		productLoop(pi as any);
-		writeWorkflowState(dir, { currentPhase: "idle" });
-		const ctx = createMockCtx(dir, entries);
-		await fireSessionStart(handlers, ctx);
-		assert.strictEqual(messages.length, 1, "should send exactly one nudge");
-		assertMessageContains(messages, "Product Creation System", "mentions system");
-		assertMessageContains(messages, "discovery", "directs to discovery");
-		assertMessageContains(messages, "Do NOT write any code", "warns against coding");
-		// Critical: triggerTurn must be false so nudge becomes context, not a separate turn
-		assert.strictEqual(messages[0].opts.triggerTurn, false, "triggerTurn should be false for guided nudge");
-		cleanupDir(dir);
-	});
+	console.log("\nGuided phases (init):");
 
 	await test("session_start with init phase → nudge with triggerTurn=false", async () => {
 		const dir = createTempDir();
@@ -463,11 +447,11 @@ async function runTests() {
 		cleanupDir(dir);
 	});
 
-	await test("idle phase → nudge sent only once (session_start then agent_end)", async () => {
+	await test("init phase → nudge sent only once (session_start then agent_end)", async () => {
 		const dir = createTempDir();
 		const { pi, handlers, messages, entries } = createMockPi();
 		productLoop(pi as any);
-		writeWorkflowState(dir, { currentPhase: "idle" });
+		writeWorkflowState(dir, { currentPhase: "init" });
 		const ctx = createMockCtx(dir, entries);
 
 		// session_start: should send nudge

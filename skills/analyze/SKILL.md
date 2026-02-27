@@ -34,7 +34,16 @@ Read all of these:
 
 ### Step 2: Launch sub-agent
 
-Use the `spec-checker` agent (from `~/.pi/agent/agents/spec-checker.md`) via `pi-subagents`. Pass ALL documents as context. The sub-agent checks:
+Use the `spec-checker` agent via the `subagent` tool:
+
+```
+subagent({
+  agent: "spec-checker",
+  task: "Review these documents for consistency and completeness:\n\n[paste brief.md, spec.md, plan.md, and constitution contents]"
+})
+```
+
+Pass ALL documents as context in the task. The sub-agent checks:
 
 1. **Brief → Spec coverage:** Does the spec cover ALL aspects of the brief? Missing scenarios?
 2. **Spec → Plan coverage:** Does the plan deliver ALL acceptance scenarios? Any gaps?

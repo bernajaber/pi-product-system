@@ -79,6 +79,17 @@ The product-loop extension governs this phase automatically:
 
 **You don't need to type any commands.** Just write tests, run them, fix, and update progress.
 
+## Non-Node projects
+
+The instructions above assume Node.js. For other runtimes, adapt:
+
+- **Python:** `python -m pytest tests/` or `python tests/<feature>.py` with `assert` statements
+- **Go:** `go test ./...`
+- **Shell/CLI:** bash test scripts with `test` / `[ ]` assertions
+- **Other:** use the language's built-in test runner. Avoid adding external test frameworks.
+
+The principle is the same: one test file per feature, every acceptance scenario has a test, tests are deterministic and fast.
+
 ## Test quality rules
 
 - Every acceptance scenario from the spec MUST have a corresponding test

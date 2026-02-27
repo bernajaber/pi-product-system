@@ -40,9 +40,15 @@ remove_link "$PI_DIR/extensions/ask-tool.ts" "extensions/ask-tool.ts"
 remove_link "$PI_DIR/extensions/product-loop.ts" "extensions/product-loop.ts"
 
 # Agents
-for agent in reviewer.md scout.md spec-checker.md; do
+for agent in scout.md spec-checker.md; do
   remove_link "$PI_DIR/agents/$agent" "agents/$agent"
 done
+
+# Also clean up V1 agent names if they exist as symlinks
+if [ -L "$PI_DIR/agents/reviewer.md" ]; then
+  rm "$PI_DIR/agents/reviewer.md"
+  echo "✓ Removed V1 agents/reviewer.md"
+fi
 
 # Root files
 remove_link "$PI_DIR/product-constitution.md" "product-constitution.md"

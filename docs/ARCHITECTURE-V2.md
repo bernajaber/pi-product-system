@@ -424,8 +424,8 @@ Fonte: https://medium.com/@tentenco/what-is-ralph-loop-a-new-era-of-autonomous-c
 Fonte: https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents
 
 Valida nossa arquitetura:
-- Feature list com `passes: false` → nosso `feature-list.json` ✅
-- Progress file → nosso `progress.md` ✅
+- ~~Feature list com `passes: false`~~ → removed in V2.3 (was write-only, nobody read it)
+- ~~Progress file~~ → removed in V2.3 (progress tracked in workflow-state.json and git log)
 - Commits atômicos → nossa disciplina de build ✅
 - Specialized agents (testing agent, QA agent) → nossa separação de skills ✅
 - Browser automation para testes → migração para `agent-browser` ✅
@@ -458,9 +458,10 @@ Citação da conclusão:
 ### Agents
 ```
 ~/.pi/agent/agents/
-├── reviewer.md         → mantém (usado pelo review skill)
 ├── scout.md            → mantém (usado para diagnóstico no loop de código)
 └── spec-checker.md     → mantém (usado pelo analyze)
+
+> `reviewer.md` was removed in V2. The review skill is self-review by the main agent — no sub-agent needed.
 ```
 
 ---
@@ -511,7 +512,7 @@ Initial state created by `/setup`:
 ```
 
 Fields added during the workflow (by skills, not by setup):
-- `feature` becomes `{ id, name, branch, reviewDepth }` when the plan skill runs
+- `feature` is set to a kebab-case string (e.g., `"proposal-generator"`) by the discovery skill in Step 0. Used for `.pi/specs/<feature>/` paths and `feature/<feature>` branch name.
 - `progress` is `{ task, of, status }` — written by the agent during build/test/review, read by product-loop
 - `version` is set by the publish skill
 
@@ -558,10 +559,9 @@ FASE 4 — Verificação:
 
 ## 16. O que NÃO mudar
 
-- `progress.md` — continua sendo o log narrativo cross-session
-- `feature-list.json` — continua rastreando features com `passes: false/true`
+- ~~`feature-list.json`~~ — removed in V2.3. Was write-only (no component read it). Violates radical simplicity.
 - `ask-tool.ts` — continua sendo usado para gates
-- Agentes (reviewer, scout, spec-checker) — continuam, só usados em contextos diferentes
+- Agentes (scout, spec-checker) — continuam, só usados em contextos diferentes. `reviewer` foi removido (review é self-review pelo agente principal).
 - Convenção de commits (conventional commits)
 - Estrutura de diretórios do projeto (`.pi/specs/<feature>/`)
 

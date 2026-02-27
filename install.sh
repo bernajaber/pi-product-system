@@ -46,8 +46,8 @@ link "$SCRIPT_DIR/extensions/product-setup" "$PI_DIR/extensions/product-setup" "
 link "$SCRIPT_DIR/extensions/ask-tool.ts" "$PI_DIR/extensions/ask-tool.ts" "extensions/ask-tool.ts"
 link "$SCRIPT_DIR/extensions/product-loop.ts" "$PI_DIR/extensions/product-loop.ts" "extensions/product-loop.ts"
 
-# Agents
-for agent in reviewer.md scout.md spec-checker.md; do
+# Agents (reviewer.md removed in V2 — review is self-review by the main agent)
+for agent in scout.md spec-checker.md; do
   link "$SCRIPT_DIR/agents/$agent" "$PI_DIR/agents/$agent" "agents/$agent"
 done
 
@@ -60,7 +60,7 @@ echo "✅ Done! Product System V2 installed."
 echo ""
 echo "Skills: discovery, specify, plan, analyze, build, test, review, validate, publish"
 echo "Extensions: product-setup (/setup command), ask-tool, product-loop"
-echo "Agents: reviewer, scout, spec-checker"
+echo "Agents: scout, spec-checker"
 echo ""
 echo "To start a new product: mkdir ~/my-product && cd ~/my-product && pi"
 echo "Then type: /setup"
