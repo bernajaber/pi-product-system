@@ -25,13 +25,18 @@ ONE thing: implement the tasks from the plan as working code.
 
 ### Step 1: Start the build loop
 
-**MANDATORY — do this FIRST, before any code changes:**
+**MANDATORY — do this FIRST, before any code changes.**
 
-```
-/loop self
-```
+`/loop self` is a slash command that the OPERATOR types, not a tool you call. You cannot invoke it yourself. Ask the operator to activate it:
 
-This enables autonomous persistence between turns. The agent keeps working until all tasks are done.
+Tell the operator in Portuguese:
+> "Para eu trabalhar autonomamente, por favor digite `/loop self` no chat."
+
+Then STOP and WAIT for the loop to activate. You'll know it's active when you receive a follow-up message saying "Continue until you are done."
+
+**If the operator doesn't activate the loop** (or you're unsure if it's active): implement ONE task at a time, commit it, then STOP. The operator will say "continue" or send you a message to proceed to the next task. Do NOT try to implement all tasks in a single turn — this generates too much output and crashes the session.
+
+**When all build tasks are done:** call the `signal_loop_success` tool to end the loop.
 
 ### Step 2: Read the plan
 

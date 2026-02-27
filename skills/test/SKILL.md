@@ -51,15 +51,17 @@ For apps that are purely visual with no testable logic: validate HTML files exis
 
 ### Step 4: Run tests with /loop
 
-Start the test loop:
+`/loop tests` is a slash command that the OPERATOR types, not a tool you call. Ask the operator to activate it:
 
-```
-/loop tests
-```
+Tell the operator in Portuguese:
+> "Testes escritos. Para rodar em loop até passarem, por favor digite `/loop tests` no chat."
 
-This runs the tests with an objective exit condition: all tests pass (exit code 0).
+Then STOP and WAIT for the loop to activate. The loop runs tests with an objective exit condition: all tests pass (exit code 0).
 - If tests fail → the loop retries automatically after you fix the issue
 - Fix the code or the test (if the test is wrong), then let the loop re-run
+- When all tests pass → call `signal_loop_success` to end the loop
+
+**If the operator doesn't activate the loop:** run the tests manually with `node tests/<feature>.test.js`. If they fail, fix and re-run. Repeat until green.
 
 ### Step 5: Commit passing tests
 
