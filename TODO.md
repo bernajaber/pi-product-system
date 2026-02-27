@@ -76,7 +76,7 @@
 ## Pending
 
 ### Phase 10: Polish & Hardening
-- [ ] Update PARA-BERNARDO.md to reflect current system (no Ctrl+., no answer.ts, new /setup flow)
+- [x] Update PARA-BERNARDO.md to reflect current system (Ctrl+. kept, /setup flow, no "Nova sessão.")
 - [ ] Test /setup in completely fresh environment
 - [ ] Test uninstall.sh + reinstall.sh cycle
 - [ ] Edge case: what happens if agent ignores AGENTS.md? Document recovery steps
@@ -88,6 +88,21 @@
 - [ ] Evaluate: session-name extension (auto-name sessions)
 - [ ] Evaluate: status-line extension (show current workflow phase)
 - [ ] Evaluate: notify extension (desktop notification on gate reached)
+
+### Phase 12: Specify Quality
+- [ ] **product-specify: identity-aware clarification** — for personal products (blog, portfolio, profile),
+      the skill specifies a design before knowing who the person is. The agent researched stephango.com
+      correctly but wrote generic AI posts and a placeholder bio because it never asked: "Quem é você?
+      O que você escreve? Qual é o seu tom?". Fix: add a product-type detection step at the start of
+      specify. If the product is personal (blog, site pessoal, portfolio, cv online), run a
+      clarification round focused on IDENTITY before researching design references:
+      - Who is the operator (name, short bio, background)?
+      - What topics/themes does the content cover?
+      - Does the operator have existing writing to use as voice reference?
+      - Should sample content reflect real ideas or be generic placeholders?
+      - What's the domain or intended URL?
+      This is different from the current "ask if description is ambiguous" rule — it's proactive for
+      identity-heavy products even when the description seems clear.
 
 ### Future
 - [ ] Convert to proper pi package (`pi install git:github.com/bernajaber/pi-product-system`)
