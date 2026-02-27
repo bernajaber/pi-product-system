@@ -48,7 +48,9 @@ For each task (except "Write Tests"):
    ```json
    { "task": N, "of": TOTAL, "status": "ok" }
    ```
-   Where N = number of tasks completed, TOTAL = total build tasks (excluding Write Tests).
+   Where N = number of tasks completed (1-based: after completing task 1, set `task: 1`).
+   TOTAL = total build tasks (excluding Write Tests).
+   The product-loop uses `task + 1` to tell you the next task number.
 6. Move to the next task
 
 **⚠️ RULE: One task = one commit. Do NOT implement multiple tasks then commit once.**

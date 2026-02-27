@@ -43,20 +43,23 @@ Use skill \`analyze\` (read \`~/.pi/agent/skills/analyze/SKILL.md\`).
 - Present Gate 2: product-language summary of build etapas (ZERO technology)
 - Wait for operator approval before proceeding
 
-### Phase 5: Build
+### Phase 5: Build (autonomous)
 Use skill \`build\` (read \`~/.pi/agent/skills/build/SKILL.md\`).
 - Input: approved plan.md
-- \`/loop self\` — one task = one commit
+- One task = one commit. Update progress in workflow-state.json after each.
+- The product-loop extension governs iteration automatically.
 - Does NOT write tests or review code
 
-### Phase 6: Test
+### Phase 6: Test (autonomous)
 Use skill \`test\` (read \`~/.pi/agent/skills/test/SKILL.md\`).
-- \`/loop tests\` — objective condition: all tests green
+- Write tests for all acceptance scenarios, run until green
 - Node.js assert, no external frameworks
+- The product-loop extension governs iteration automatically.
 
-### Phase 7: Review
+### Phase 7: Review (autonomous)
 Use skill \`review\` (read \`~/.pi/agent/skills/review/SKILL.md\`).
-- \`/review uncommitted\` — catches what tests can't: UX, visual, constitution violations
+- Self-review of code quality: UX, visual, constitution violations
+- The product-loop extension sends the review rubric automatically.
 - P0/P1 must be fixed (max 3 cycles)
 
 ### Phase 8: Validate → Gate 3
@@ -199,7 +202,7 @@ const WORKFLOW_STATE = JSON.stringify(
 
 const REVIEW_GUIDELINES = `# Review Guidelines
 
-> Project-specific review rules. Loaded automatically by the /review extension.
+> Project-specific review rules. Loaded automatically by the product-loop extension during review phase.
 > Updated by the plan skill with technical decisions.
 
 ## Product Principles (from Product Constitution — always apply)
@@ -303,13 +306,17 @@ export default function (pi: ExtensionAPI) {
       // --- Step 5: Notify and hand off to agent ---
       ctx.ui.notify("Product System initialized!", "info");
 
-      pi.sendUserMessage(
-        `The Product System has been initialized. Files created: .pi/AGENTS.md, .pi/engineering-constitution.md, .pi/workflow-state.json, REVIEW_GUIDELINES.md, .gitignore.
+      pi.sendMessage(
+        {
+          customType: "product-setup",
+          content: `The Product System has been initialized. Files created: .pi/AGENTS.md, .pi/engineering-constitution.md, .pi/workflow-state.json, REVIEW_GUIDELINES.md, .gitignore.
 
 Ask the operator IN PORTUGUESE: **"Tudo pronto! O que você quer construir?"**
 
 When the operator responds, follow the workflow in .pi/AGENTS.md: start with the discovery skill (read ~/.pi/agent/skills/discovery/SKILL.md).`,
-        { deliverAs: "followUp" }
+          display: true,
+        },
+        { deliverAs: "followUp", triggerTurn: true }
       );
     },
   });

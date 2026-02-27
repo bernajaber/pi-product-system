@@ -97,10 +97,17 @@ git pull origin main
 ### Step 7: Tag version and update artifacts
 
 **Version bump:**
+
+If the project has a `package.json`:
 ```bash
 npm version <new-version> --no-git-tag-version
+```
+
+If there is no `package.json` (simple HTML/JS projects), skip `npm version` — just tag directly:
+```bash
 git tag v<new-version>
 ```
+
 Versioning: patch for simple features, minor for medium, major for breaking changes.
 
 **feature-list.json** — mark completed feature as `"passes": true`

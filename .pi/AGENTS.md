@@ -25,9 +25,9 @@ See `docs/ARCHITECTURE-V2.md` for the complete specification.
 | `specify` | `spec.md` | Brief → acceptance scenarios |
 | `plan` | `plan.md` | Spec → atomic tasks + stack + structure |
 | `analyze` | `critique.md` | Sub-agent consistency check + Gate 2 |
-| `build` | committed code | Plan → implementation (/loop self) |
-| `test` | passing tests | Code → verified scenarios (/loop tests) |
-| `review` | clean code | Code → quality check (P0/P1 criteria) |
+| `build` | committed code | Plan → implementation (product-loop governs) |
+| `test` | passing tests | Code → verified scenarios (product-loop governs) |
+| `review` | clean code | Code → quality check (product-loop sends rubric) |
 | `validate` | evidence | Code → browser verification + Gate 3 |
 | `publish` | release | Gate 3 → PR + merge + tag + changelog |
 

@@ -66,7 +66,7 @@ Read `~/.pi/agent/product-constitution.md` and check each principle:
 - [ ] Accessibility: missing alt text, keyboard navigation, contrast
 - [ ] Hardcoded values that should be constants
 
-Also check against `REVIEW_GUIDELINES.md` in the project root (if it exists).
+The product-loop extension automatically includes the project's `REVIEW_GUIDELINES.md` in its follow-up. Use it as your reference for severity definitions and project-specific rules.
 
 ### Step 3: Report findings
 

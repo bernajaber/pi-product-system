@@ -323,9 +323,9 @@ O sistema vive neste repo e é instalado em `~/.pi/agent/` via symlinks (`instal
     - [ ] plan tem tasks atômicas com mapeamento de cenários
     - [ ] analyze loop detecta inconsistências (testar com spec intencionalmente incompleto)
     - [ ] Gate 2 apresenta resumo em PT sem tecnologia
-    - [ ] build implementa uma task por commit
-    - [ ] test roda com /loop tests até verde
-    - [ ] review usa critérios V2 (P0/P1 = o que test não cobre)
+    - [ ] build implementa uma task por commit (product-loop governs)
+    - [ ] test roda até verde (product-loop governs)
+    - [ ] review usa critérios V2 (P0/P1 = o que test não cobre, product-loop sends rubric)
     - [ ] validate abre browser, percorre cenários, tira screenshots
     - [ ] Code loop re-entry é cirúrgico (task específica, não rebuild total)
     - [ ] Gate 3 mostra produto + screenshots + checklist

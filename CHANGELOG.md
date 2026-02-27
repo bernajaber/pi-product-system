@@ -1,5 +1,30 @@
 # Changelog
 
+## v2.1.0 — 2026-02-26
+
+### Added
+- `product-loop.ts` extension — autonomous workflow governor for build/test/review phases
+  - Sends contextual follow-ups after each agent turn (Drive → Diagnose → Escalate)
+  - Review rubric from REVIEW_GUIDELINES.md sent automatically, max 3 cycles enforced
+  - Surgical fix mode: detects `codeLoop.lastFailedScenario` and sends targeted instructions
+  - Compaction-safe, restart-safe (resumes loop on session_start), widget in TUI
+- `ask` tool: improved multi-select with ☑/☐ indicators (index-based, no string-prefix hack)
+
+### Changed
+- All autonomous skills (build, test, review) no longer depend on operator slash commands
+  - Removed: `/loop self`, `/loop tests`, `/review uncommitted`, `/end-review`, `signal_loop_success`
+  - Replaced by: `product-loop.ts` extension which governs all three phases automatically
+- `publish` skill: handles projects without `package.json` (skips `npm version`)
+- `publish` skill: review summary goes in PR body (no separate `/review branch main` step)
+- AGENTS.md template (product-setup): updated to reference product-loop, removed V1 commands
+- `sendUserMessage` in product-setup replaced with `sendMessage` (correct API contract)
+
+### Fixed
+- Review phase could loop forever (no max cycle enforcement) — now capped at 3 by extension
+- Code quality loop (validate fail → build fix) had no governance — product-loop now detects surgical fix mode
+- Session restart during autonomous phase caused stall — product-loop now sends resume follow-up on session_start
+- Review rubric was duplicated in 3 places — consolidated to REVIEW_GUIDELINES.md (single source of truth)
+
 ## v2.0.0 — 2026-02-27
 
 ### Architecture
@@ -11,12 +36,12 @@
 ### New Skills
 - `discovery`: deep interview with no round limit → `brief.md` (< 1 page, 6 sections)
 - `analyze`: sub-agent consistency check → `critique.md` + reviewDepth + Gate 2
-- `test`: extracted from build-loop → `/loop tests` with objective exit condition
+- `test`: extracted from build-loop → objective exit condition (tests green)
 - `review`: extracted from build-loop → P0/P1 criteria for what tests can't catch
 
 ### Rewritten Skills
 - `specify`: input is brief.md only (no interview, no research — pure spec writing)
-- `build`: `/loop self` only (no tests, no review — one task = one commit)
+- `build`: one task = one commit (no tests, no review — governed by product-loop)
 
 ### Renamed Skills
 - `auto-plan` → `plan`: removed Gate 2 presentation (now analyze's job)

@@ -320,16 +320,17 @@ Artefato interno salvo em `.pi/specs/<feature>/critique.md`. Não é deletado (t
 - Sem limite de rodadas — profundidade total
 
 ### `build` usa:
-- `/loop self` — persistência autônoma entre turnos
-- NÃO é o mesmo que `review_loop` tool (ver confusão no piloto V1)
-- Compaction-aware via loop.ts
+- `product-loop` extension — envia follow-ups automáticos a cada agent_end
+- Agente reporta progresso via `progress` em workflow-state.json
+- Compaction-aware via product-loop.ts (injeta instruções no compaction)
 
 ### `test` usa:
-- `/loop tests` — condição objetiva (testes verdes)
+- `product-loop` extension — condição objetiva (testes verdes)
 - `node tests/<feature>.test.js` — Node.js assert, sem frameworks externos
 
 ### `review` usa:
-- `/review uncommitted` — mitsupi
+- `product-loop` extension — envia rubric + REVIEW_GUIDELINES.md como follow-up
+- Max 3 ciclos de review, enforced pela extensão (não pelo LLM)
 - Critérios do `REVIEW_GUIDELINES.md` (reescrito para V2 — ver seção 13)
 
 ### `validate` usa:
@@ -410,12 +411,12 @@ O que prefere?"
 
 ## 11. Referências que validam esta arquitetura
 
-### Ralph Loop
+### Ralph Loop (inspiration — adapted into product-loop extension)
 Fonte: https://medium.com/@tentenco/what-is-ralph-loop-a-new-era-of-autonomous-coding-96a4bb3e2ac8
 
-- `/loop self` = persistência autônoma (condição subjetiva)
-- `/loop tests` = condição objetiva, retry em falha
-- Cada um no lugar certo: `/loop self` no build, `/loop tests` no test
+- Concept: autonomous persistence with subjective and objective exit conditions
+- Our adaptation: `product-loop.ts` extension handles both — sends follow-ups automatically,
+  no operator commands needed. Build uses subjective progress, test uses objective condition (tests green).
 
 ### Anthropic — Effective Harnesses for Long-Running Agents
 Fonte: https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents
@@ -479,18 +480,12 @@ Reescrever `REVIEW_GUIDELINES.md` junto com a implementação do `review` skill.
 
 ## 14. State persistence — workflow-state.json V2
 
-Campos adicionados para suportar os loops:
+Initial state created by `/setup`:
 
 ```json
 {
-  "project": "nome",
-  "currentPhase": "analyze-loop",
-  "feature": {
-    "id": "001",
-    "name": "feature-name",
-    "branch": "feature/001",
-    "reviewDepth": "medium"
-  },
+  "currentPhase": "init",
+  "feature": null,
   "gates": {
     "briefApproved": false,
     "planApproved": false,
@@ -509,19 +504,20 @@ Campos adicionados para suportar os loops:
     "lastDiagnosis": null,
     "lastReentryTask": null
   },
-  "phaseHistory": [],
-  "scopeChanges": [],
-  "iterationCount": 0,
-  "failureCount": 0,
-  "feedback": [],
-  "version": "v0.1.0"
+  "failureCount": 0
 }
 ```
+
+Fields added during the workflow (by skills, not by setup):
+- `feature` becomes `{ id, name, branch, reviewDepth }` when the plan skill runs
+- `progress` is `{ task, of, status }` — written by the agent during build/test/review, read by product-loop
+- `version` is set by the publish skill
 
 Mudanças vs V1:
 - `gates` renomeados: `specApproved` → `briefApproved`, `buildApproved` → `planApproved`, `validationApproved` → `releaseApproved`
 - `analyzeLoop` e `codeLoop` adicionados para sobreviver a compactions
-- `currentPhase` ganha novos valores: `discovery`, `specify`, `plan`, `analyze-loop`, `build`, `test`, `review`, `validate`, `code-loop`, `publish`
+- `codeLoop.lastFailedScenario` detected by product-loop to trigger surgical fix mode in build phase
+- `currentPhase` values: `init`, `discovery`, `specify`, `plan`, `analyze`, `build`, `test`, `review`, `validate`, `publish`
 
 ---
 

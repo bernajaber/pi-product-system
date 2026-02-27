@@ -14,10 +14,9 @@
  *   Diagnose — agent reports stuck → "Analyze what's wrong, try different approach"
  *   Escalate — stuck 2+ turns → "Escalate to operator via ask tool"
  *
- * Review phase uses the diff-based review concept from mitsupi's /review,
- * adapted for autonomous operation: no session branching, no operator commands.
- * The rubric + REVIEW_GUIDELINES.md are sent as follow-up context.
- * Review summary goes into the PR at publish time.
+ * Review phase: the extension sends the review rubric + project REVIEW_GUIDELINES.md
+ * as follow-up context. Adapted from mitsupi's /review concept for autonomous operation.
+ * Max 3 review cycles enforced by the extension. Review summary goes in the PR at publish.
  *
  * The loop ends naturally when currentPhase changes to a non-autonomous phase.
  * No signal_loop_success needed. No slash commands. No tools.
@@ -31,6 +30,8 @@ import * as path from "node:path";
 // Phases where the extension sends follow-ups automatically
 const AUTONOMOUS_PHASES = ["build", "test", "review"];
 
+const MAX_REVIEW_CYCLES = 3;
+
 type Progress = {
 	task: number;
 	of: number;
@@ -39,9 +40,12 @@ type Progress = {
 
 type WorkflowState = {
 	currentPhase: string;
-	feature: string | null;
 	progress?: Progress;
-	failureCount: number;
+	codeLoop?: {
+		lastFailedScenario?: string | null;
+		lastDiagnosis?: string | null;
+		lastReentryTask?: string | null;
+	};
 	[key: string]: unknown;
 };
 
@@ -49,51 +53,19 @@ type LoopStateData = {
 	active: boolean;
 	phase: string | null;
 	stuckCount: number;
-	lastTask: number;
 	turnCount: number;
+	reviewCycles: number;
 };
 
 const LOOP_STATE_ENTRY = "product-loop-state";
 
-// ---------------------------------------------------------------------------
-// Review rubric (adapted from mitsupi's /review, Codex-inspired)
-// ---------------------------------------------------------------------------
-
-const REVIEW_RUBRIC = `## What to flag
-
-Flag issues that:
-1. Meaningfully impact accuracy, performance, security, or maintainability.
-2. Are discrete and actionable (not general or combined issues).
-3. Were introduced in the changes being reviewed (not pre-existing).
-4. The author would fix if aware of them.
-5. Have provable impact (not speculation).
-
-## Priority levels
-
-- [P0] — Blocks release. Breaks something tests didn't catch.
-- [P1] — Urgent. Violates Product Constitution principles.
-- [P2] — Normal. Code quality issues.
-- [P3] — Low. Nice to have.
-
-## Security checks
-
-- Flag SQL that is not parameterized.
-- Flag unvalidated user input rendered as HTML (XSS).
-- Flag exposed secrets or credentials.
-- Flag open redirects without domain validation.
-
-## Comment guidelines
-
-- Be clear about WHY the issue is a problem.
-- Be brief — at most 1 paragraph per finding.
-- Use a matter-of-fact tone.
-- Explicitly state scenarios where the issue arises.
-
-## Output format
-
-1. List each finding: priority tag, file:line, explanation.
-2. End with verdict: "correct" (no P0/P1) or "needs attention" (has P0/P1).
-3. If no qualifying findings, state the code looks good.`;
+const EMPTY_STATE: LoopStateData = {
+	active: false,
+	phase: null,
+	stuckCount: 0,
+	turnCount: 0,
+	reviewCycles: 0,
+};
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -131,32 +103,32 @@ function wasLastAssistantAborted(messages: Array<{ role?: string; stopReason?: s
 // Follow-up messages per phase and gear
 // ---------------------------------------------------------------------------
 
-function buildFollowUp(ws: WorkflowState, loopState: LoopStateData, cwd: string): string | null {
+function phaseFollowUp(ws: WorkflowState, progress: Progress | undefined, loopState: LoopStateData, cwd: string): string | null {
 	const phase = ws.currentPhase;
-	const progress = ws.progress;
-
-	if (!AUTONOMOUS_PHASES.includes(phase)) return null;
-
-	if (phase === "build") {
-		return buildPhaseFollowUp(ws, progress, loopState);
-	}
-
-	if (phase === "test") {
-		return testPhaseFollowUp(ws, progress, loopState);
-	}
-
-	if (phase === "review") {
-		return reviewPhaseFollowUp(ws, progress, loopState, cwd);
-	}
-
+	if (phase === "build") return buildPhaseFollowUp(progress, loopState, ws);
+	if (phase === "test") return testPhaseFollowUp(progress, loopState);
+	if (phase === "review") return reviewPhaseFollowUp(progress, loopState, cwd);
 	return null;
 }
 
-function buildPhaseFollowUp(
-	_ws: WorkflowState,
-	progress: Progress | undefined,
-	loopState: LoopStateData
-): string {
+function buildPhaseFollowUp(progress: Progress | undefined, loopState: LoopStateData, ws: WorkflowState): string {
+	// Surgical fix mode: code quality loop sent us back to build for a specific fix
+	const codeLoop = ws.codeLoop as { lastFailedScenario?: string; lastDiagnosis?: string; lastReentryTask?: string } | undefined;
+	if (codeLoop?.lastFailedScenario) {
+		const scenario = codeLoop.lastFailedScenario;
+		const diagnosis = codeLoop.lastDiagnosis || "See scout diagnosis above.";
+		const task = codeLoop.lastReentryTask;
+		return [
+			"⚠️ SURGICAL FIX MODE — code quality loop.",
+			`Failed scenario: "${scenario}"`,
+			task ? `Mapped to plan task: ${task}` : "No specific task mapped — investigate the root cause.",
+			`Diagnosis: ${diagnosis}`,
+			"",
+			"Fix ONLY the specific issue. Commit the fix. Then update progress to mark this task done.",
+			"The loop will run test → review → validate again after the fix.",
+		].join("\n");
+	}
+
 	if (!progress) {
 		return [
 			"You are in the build phase. Read ~/.pi/agent/skills/build/SKILL.md and .pi/specs/*/plan.md.",
@@ -202,11 +174,7 @@ function buildPhaseFollowUp(
 	].join("\n");
 }
 
-function testPhaseFollowUp(
-	_ws: WorkflowState,
-	progress: Progress | undefined,
-	loopState: LoopStateData
-): string {
+function testPhaseFollowUp(progress: Progress | undefined, loopState: LoopStateData): string {
 	if (!progress) {
 		return [
 			"You are in the test phase. Read ~/.pi/agent/skills/test/SKILL.md.",
@@ -246,12 +214,7 @@ function testPhaseFollowUp(
 	].join("\n");
 }
 
-function reviewPhaseFollowUp(
-	_ws: WorkflowState,
-	progress: Progress | undefined,
-	loopState: LoopStateData,
-	cwd: string
-): string {
+function reviewPhaseFollowUp(progress: Progress | undefined, loopState: LoopStateData, cwd: string): string {
 	if (!progress) {
 		return [
 			"You are in the review phase. Read ~/.pi/agent/skills/review/SKILL.md.",
@@ -265,6 +228,15 @@ function reviewPhaseFollowUp(
 			"Review is clean — no P0/P1 issues.",
 			'Update currentPhase to "validate" in .pi/workflow-state.json.',
 			"Then follow the validate skill: ~/.pi/agent/skills/validate/SKILL.md",
+		].join("\n");
+	}
+
+	// Max cycles reached — force proceed
+	if (loopState.reviewCycles >= MAX_REVIEW_CYCLES) {
+		return [
+			`Review has run ${MAX_REVIEW_CYCLES} cycles. Proceeding to validate — it will catch remaining issues through browser testing.`,
+			"Update progress: { task: 1, of: 1, status: \"ok\" } to mark review as complete.",
+			'Then update currentPhase to "validate" in .pi/workflow-state.json.',
 		].join("\n");
 	}
 
@@ -285,19 +257,14 @@ function reviewPhaseFollowUp(
 		].join("\n");
 	}
 
-	// Drive — run the review
-	// Build the review prompt with rubric + project guidelines
+	// Drive — run the review. Send rubric + project guidelines.
 	const parts: string[] = [];
 
-	parts.push("Review all code changes on this branch. Run `git diff main` (or the base branch) to see the full diff.");
-	parts.push("");
-	parts.push(REVIEW_RUBRIC);
+	parts.push(`Review cycle ${loopState.reviewCycles + 1} of ${MAX_REVIEW_CYCLES}. Review all code changes on this branch. Run \`git diff main\` (or the base branch) to see the full diff.`);
 
-	// Append project-specific guidelines
+	// Append project-specific guidelines (single source of truth for per-project rules)
 	const guidelines = readReviewGuidelines(cwd);
 	if (guidelines) {
-		parts.push("");
-		parts.push("## Project-specific review guidelines");
 		parts.push("");
 		parts.push(guidelines);
 	}
@@ -307,8 +274,7 @@ function reviewPhaseFollowUp(
 	parts.push("");
 	parts.push("After reviewing:");
 	parts.push('- If P0 or P1 found: fix them, commit with message "fix: [what] (review P0/P1)", then update progress status to "ok" (the review will run again).');
-	parts.push('- If only P2/P3 or clean: update progress task to 1 (marks review as complete).');
-	parts.push("- Max 3 review cycles. After that, proceed anyway — validate will catch remaining issues.");
+	parts.push("- If only P2/P3 or clean: update progress task to 1 (marks review as complete).");
 
 	return parts.join("\n");
 }
@@ -338,8 +304,8 @@ function updateWidget(ctx: ExtensionContext, ws: WorkflowState | null, loopState
 			: `🧪 Test: running (turn ${loopState.turnCount})`;
 	} else if (phase === "review") {
 		text = progress?.status === "stuck"
-			? `🔍 Review: fixing issues ⚠️ (turn ${loopState.turnCount})`
-			: `🔍 Review: cycle ${loopState.turnCount}`;
+			? `🔍 Review: fixing issues ⚠️ (cycle ${loopState.reviewCycles}/${MAX_REVIEW_CYCLES})`
+			: `🔍 Review: cycle ${loopState.reviewCycles + 1}/${MAX_REVIEW_CYCLES}`;
 	}
 
 	if (text) {
@@ -355,13 +321,7 @@ function updateWidget(ctx: ExtensionContext, ws: WorkflowState | null, loopState
 // ---------------------------------------------------------------------------
 
 export default function productLoop(pi: ExtensionAPI): void {
-	let loopState: LoopStateData = {
-		active: false,
-		phase: null,
-		stuckCount: 0,
-		lastTask: 0,
-		turnCount: 0,
-	};
+	let loopState: LoopStateData = { ...EMPTY_STATE };
 
 	function persistState(): void {
 		pi.appendEntry(LOOP_STATE_ENTRY, loopState);
@@ -372,10 +332,17 @@ export default function productLoop(pi: ExtensionAPI): void {
 		for (let i = entries.length - 1; i >= 0; i--) {
 			const entry = entries[i] as { type: string; customType?: string; data?: LoopStateData };
 			if (entry.type === "custom" && entry.customType === LOOP_STATE_ENTRY && entry.data) {
-				return entry.data;
+				return { ...EMPTY_STATE, ...entry.data };
 			}
 		}
-		return { active: false, phase: null, stuckCount: 0, lastTask: 0, turnCount: 0 };
+		return { ...EMPTY_STATE };
+	}
+
+	function sendFollowUp(content: string): void {
+		pi.sendMessage(
+			{ customType: "product-loop", content, display: true },
+			{ deliverAs: "followUp", triggerTurn: true }
+		);
 	}
 
 	// --- agent_end: core loop logic ---
@@ -393,7 +360,7 @@ export default function productLoop(pi: ExtensionAPI): void {
 				"Operação interrompida. Quer parar o loop de trabalho?"
 			);
 			if (confirm) {
-				loopState = { active: false, phase: null, stuckCount: 0, lastTask: 0, turnCount: 0 };
+				loopState = { ...EMPTY_STATE };
 				persistState();
 				updateWidget(ctx, ws, loopState);
 				ctx.ui.notify("Loop parado", "info");
@@ -404,7 +371,7 @@ export default function productLoop(pi: ExtensionAPI): void {
 		// Not an autonomous phase? Clear loop and return.
 		if (!AUTONOMOUS_PHASES.includes(ws.currentPhase)) {
 			if (loopState.active) {
-				loopState = { active: false, phase: null, stuckCount: 0, lastTask: 0, turnCount: 0 };
+				loopState = { ...EMPTY_STATE };
 				persistState();
 				updateWidget(ctx, ws, loopState);
 			}
@@ -417,8 +384,8 @@ export default function productLoop(pi: ExtensionAPI): void {
 				active: true,
 				phase: ws.currentPhase,
 				stuckCount: 0,
-				lastTask: ws.progress?.task ?? 0,
 				turnCount: 0,
+				reviewCycles: 0,
 			};
 		}
 
@@ -430,8 +397,10 @@ export default function productLoop(pi: ExtensionAPI): void {
 			loopState.stuckCount = 0;
 		}
 
-		if (progress) {
-			loopState.lastTask = progress.task;
+		// Track review cycles: each time the review follow-up is about to send
+		// the rubric (progress exists, task < of, status ok, not stuck), that's a new cycle.
+		if (ws.currentPhase === "review" && progress && progress.task < progress.of && progress.status === "ok") {
+			loopState.reviewCycles++;
 		}
 
 		loopState.active = true;
@@ -441,20 +410,10 @@ export default function productLoop(pi: ExtensionAPI): void {
 		updateWidget(ctx, ws, loopState);
 
 		// Build and send follow-up
-		const followUp = buildFollowUp(ws, loopState, ctx.cwd);
+		const followUp = phaseFollowUp(ws, progress, loopState, ctx.cwd);
 		if (!followUp) return;
 
-		pi.sendMessage(
-			{
-				customType: "product-loop",
-				content: followUp,
-				display: true,
-			},
-			{
-				deliverAs: "followUp",
-				triggerTurn: true,
-			}
-		);
+		sendFollowUp(followUp);
 	});
 
 	// --- Compaction: preserve loop context ---
@@ -473,9 +432,10 @@ export default function productLoop(pi: ExtensionAPI): void {
 		const loopInstructions = [
 			`Product workflow loop active. Phase: ${loopState.phase}. Progress: ${progressText}.`,
 			`Turn count: ${loopState.turnCount}. Stuck count: ${loopState.stuckCount}.`,
+			loopState.phase === "review" ? `Review cycles: ${loopState.reviewCycles}/${MAX_REVIEW_CYCLES}.` : "",
 			"After compaction, continue from where you left off. Read .pi/workflow-state.json for current state.",
 			"Update progress in workflow-state.json after each task.",
-		].join("\n");
+		].filter(Boolean).join("\n");
 
 		const combinedInstructions = [event.customInstructions, loopInstructions]
 			.filter(Boolean)
@@ -498,7 +458,7 @@ export default function productLoop(pi: ExtensionAPI): void {
 		}
 	});
 
-	// --- Session start: restore state ---
+	// --- Session start: restore state and resume if needed ---
 	pi.on("session_start", async (_event, ctx) => {
 		loopState = loadState(ctx);
 
@@ -507,8 +467,14 @@ export default function productLoop(pi: ExtensionAPI): void {
 			loopState.active = true;
 			loopState.phase = ws.currentPhase;
 			updateWidget(ctx, ws, loopState);
+
+			// Resume: send a follow-up so the agent doesn't sit idle after restart
+			const followUp = phaseFollowUp(ws, ws.progress, loopState, ctx.cwd);
+			if (followUp) {
+				sendFollowUp(followUp);
+			}
 		} else if (loopState.active) {
-			loopState = { active: false, phase: null, stuckCount: 0, lastTask: 0, turnCount: 0 };
+			loopState = { ...EMPTY_STATE };
 			persistState();
 		}
 	});
