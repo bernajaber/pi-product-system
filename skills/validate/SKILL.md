@@ -23,12 +23,20 @@ ONE thing: verify that the built product works by testing every scenario in a re
 
 ### Step 1: Start the app
 
-**For static HTML/JS apps (no server needed):**
+**⚠️ ALWAYS use an HTTP server.** The `file://` protocol does NOT work with ES modules (CORS policy blocks module imports). Even for "static" HTML/JS apps, serve via HTTP.
+
+**For static HTML/JS/CSS apps:**
 ```bash
-agent-browser open "file:///absolute/path/to/index.html"
+# Start a simple HTTP server in background
+npx -y serve -l 4321 &>/dev/null & disown
+sleep 2
+# Verify it's up
+curl -s http://localhost:4321 | head -5
+# Open in browser
+agent-browser open http://localhost:4321
 ```
 
-**For apps that require a server:**
+**For apps with a custom server (Node, Python, etc.):**
 ```bash
 # Start server in background
 nohup node server.js > /dev/null 2>&1 & disown
@@ -40,6 +48,16 @@ agent-browser open http://localhost:4321
 ```
 
 **NEVER combine server start + browser open in one command.**
+
+**If `npx serve` hangs or the port is occupied:**
+```bash
+# Check if port is in use
+lsof -i :4321
+# Kill existing process
+kill $(lsof -ti :4321) 2>/dev/null
+# Try python as fallback
+python3 -m http.server 4321 --directory . &>/dev/null & disown
+```
 
 ### Step 2: Set viewport
 

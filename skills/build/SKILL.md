@@ -77,12 +77,14 @@ The product-loop extension governs this phase automatically:
 
 ## Verification during build
 
-For static HTML/JS apps, verify visually using `file://` protocol — NO server needed:
+During build, verify the code is correct by reading it — NOT by opening a browser. Visual verification happens in the `validate` phase.
+
+For quick checks, read the generated files:
 ```bash
 cat index.html | head -50
 ```
 
-For apps that REQUIRE a server (API, SSR): defer visual verification to the `validate` phase. During build, verify that the code runs without errors:
+For apps that REQUIRE a server to verify basic functionality:
 ```bash
 node server.js &
 curl -s http://localhost:4321 | head -5
@@ -90,6 +92,8 @@ kill %1
 ```
 
 **Do NOT start long-running dev servers during build.** The bash tool cannot handle background processes reliably.
+
+**Do NOT use `file://` protocol.** ES modules do not work with `file://` due to CORS. All browser testing happens in the `validate` phase with a proper HTTP server.
 
 ## Rules
 
