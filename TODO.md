@@ -89,19 +89,31 @@
       add `gh repo create <project-name> --private --source=. --push` to the /setup extension
       after the initial commit. Ask the operator if they want public or private repo.
 
-- [ ] **FIX: /loop self confusion — rename, don't remove** — agent confused the build loop
-      command with the review_loop tool. Root cause: same word "loop" in both names.
-      
-      Analysis: /loop self IS implementing the Ralph Loop pattern (autonomous persistence
-      across turns, compaction-aware, status widget). It has real value and should be kept.
-      The problem is naming, not the mechanism.
-      
-      Fix: in build-loop/SKILL.md, never refer to it as "/loop self" in prose. Instead:
-        - Call it "the autonomous build loop" or "Ralph Loop" in descriptions
-        - Show the actual command only when needed: "start it with `/loop self` in the chat"
-        - Add explicit separation: "This is NOT the review_loop tool. review_loop = code review.
-          /loop self = autonomous build persistence. Completely different things."
-        - Consider renaming the phase in AGENTS.md: "Ralph Loop phase" vs "self-review phase"
+- [ ] **REFACTOR: split build-loop into focused skills** — build-loop currently does 3 things
+      (implement features, write+run tests, self-review), violating "do one thing well",
+      radical simplicity, and extensibility.
+
+      New architecture — one skill, one responsibility:
+
+        build-loop   → implements features task by task, commits each one
+                       uses /loop self (subjective condition: "done when all tasks committed")
+
+        test-loop    → writes tests + runs /loop tests until passing
+                       true Ralph Loop: objective condition (tests green), retry on failure
+
+        review       → /review uncommitted, fix P0/P1, escalate if needed
+                       (currently Phase 2 of build-loop — extract into own skill or keep in build-loop)
+
+      Impact on /loop self vs /loop tests debate: resolved naturally.
+      Each mechanism in the right place — /loop self where condition is subjective (build),
+      /loop tests where condition is objective (tests). No more confusion.
+
+      Steps:
+      1. Create skills/test-loop/SKILL.md — extract test writing + /loop tests logic
+      2. Update skills/build-loop/SKILL.md — remove test task, remove self-review phase,
+         end with "all feature tasks committed → move to test-loop skill"
+      3. Update auto-plan/SKILL.md — "Write tests" task moves to test-loop, not build-loop
+      4. Update AGENTS.md workflow map to reflect 3-phase build: build → test → review
 
 - [ ] **FIX: browser verification being skipped** — product-validate ran without using any
       browser tool for visual verification. Confirmed surf doesn't work without Chrome open.
