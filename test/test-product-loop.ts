@@ -434,57 +434,60 @@ async function runTests() {
 
 	console.log("\nGuided phases (idle/init):");
 
-	await test("idle phase → one-time nudge to start discovery", async () => {
+	await test("session_start with idle phase → nudge with triggerTurn=false", async () => {
 		const dir = createTempDir();
 		const { pi, handlers, messages, entries } = createMockPi();
 		productLoop(pi as any);
 		writeWorkflowState(dir, { currentPhase: "idle" });
 		const ctx = createMockCtx(dir, entries);
-		await fireAgentEnd(handlers, ctx);
+		await fireSessionStart(handlers, ctx);
 		assert.strictEqual(messages.length, 1, "should send exactly one nudge");
 		assertMessageContains(messages, "Product Creation System", "mentions system");
 		assertMessageContains(messages, "discovery", "directs to discovery");
 		assertMessageContains(messages, "Do NOT write any code", "warns against coding");
+		// Critical: triggerTurn must be false so nudge becomes context, not a separate turn
+		assert.strictEqual(messages[0].opts.triggerTurn, false, "triggerTurn should be false for guided nudge");
 		cleanupDir(dir);
 	});
 
-	await test("init phase → one-time nudge to start discovery", async () => {
+	await test("session_start with init phase → nudge with triggerTurn=false", async () => {
 		const dir = createTempDir();
 		const { pi, handlers, messages, entries } = createMockPi();
 		productLoop(pi as any);
 		writeWorkflowState(dir, { currentPhase: "init" });
 		const ctx = createMockCtx(dir, entries);
-		await fireAgentEnd(handlers, ctx);
+		await fireSessionStart(handlers, ctx);
 		assert.strictEqual(messages.length, 1, "should send exactly one nudge");
 		assertMessageContains(messages, "discovery", "directs to discovery");
+		assert.strictEqual(messages[0].opts.triggerTurn, false, "triggerTurn should be false for guided nudge");
 		cleanupDir(dir);
 	});
 
-	await test("idle phase → nudge sent only once (not repeated)", async () => {
+	await test("idle phase → nudge sent only once (session_start then agent_end)", async () => {
 		const dir = createTempDir();
 		const { pi, handlers, messages, entries } = createMockPi();
 		productLoop(pi as any);
 		writeWorkflowState(dir, { currentPhase: "idle" });
 		const ctx = createMockCtx(dir, entries);
 
-		// First turn: should send nudge
-		await fireAgentEnd(handlers, ctx);
-		assert.strictEqual(messages.length, 1, "first turn sends nudge");
+		// session_start: should send nudge
+		await fireSessionStart(handlers, ctx);
+		assert.strictEqual(messages.length, 1, "session_start sends nudge");
 
-		// Second turn: should NOT send nudge again
+		// agent_end: should NOT send nudge again (guidedNudgeSent=true)
 		messages.length = 0;
 		await fireAgentEnd(handlers, ctx);
-		assert.strictEqual(messages.length, 0, "second turn should not repeat nudge");
+		assert.strictEqual(messages.length, 0, "agent_end should not repeat nudge");
 		cleanupDir(dir);
 	});
 
-	await test("discovery phase (not idle/init) → no nudge", async () => {
+	await test("session_start with discovery phase → no nudge", async () => {
 		const dir = createTempDir();
 		const { pi, handlers, messages, entries } = createMockPi();
 		productLoop(pi as any);
 		writeWorkflowState(dir, { currentPhase: "discovery" });
 		const ctx = createMockCtx(dir, entries);
-		await fireAgentEnd(handlers, ctx);
+		await fireSessionStart(handlers, ctx);
 		assert.strictEqual(messages.length, 0, "discovery phase should not get nudge");
 		cleanupDir(dir);
 	});

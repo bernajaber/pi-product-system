@@ -343,10 +343,10 @@ export default function productLoop(pi: ExtensionAPI): void {
 		return { ...EMPTY_STATE };
 	}
 
-	function sendFollowUp(content: string): void {
+	function sendFollowUp(content: string, triggerTurn: boolean = true): void {
 		pi.sendMessage(
 			{ customType: "product-loop", content, display: true },
-			{ deliverAs: "followUp", triggerTurn: true }
+			{ deliverAs: "followUp", triggerTurn }
 		);
 	}
 
@@ -371,20 +371,6 @@ export default function productLoop(pi: ExtensionAPI): void {
 				ctx.ui.notify("Loop parado", "info");
 				return;
 			}
-		}
-
-		// Guided phases (idle/init): send a one-time nudge to follow the workflow.
-		// Without this, the agent may skip discovery and code directly.
-		if (GUIDED_PHASES.includes(ws.currentPhase) && !loopState.guidedNudgeSent) {
-			loopState.guidedNudgeSent = true;
-			persistState();
-			sendFollowUp(
-				"⚠️ This project uses the Product Creation System. You MUST follow the workflow in .pi/AGENTS.md.\n" +
-				"Do NOT write any code until Gates 1 and 2 are approved.\n\n" +
-				"Start now: read ~/.pi/agent/skills/discovery/SKILL.md and begin the discovery process.\n" +
-				"The operator's message above is your input — interview them to understand what they want to build."
-			);
-			return;
 		}
 
 		// Not an autonomous phase? Clear loop and return.
@@ -492,6 +478,21 @@ export default function productLoop(pi: ExtensionAPI): void {
 			if (followUp) {
 				sendFollowUp(followUp);
 			}
+		} else if (ws && GUIDED_PHASES.includes(ws.currentPhase) && !loopState.guidedNudgeSent) {
+			// Guided phases (idle/init): send nudge on session_start with triggerTurn=false
+			// so it becomes context for the agent ALONGSIDE the user's first message.
+			// Using triggerTurn=true would consume the nudge in a separate turn before
+			// the user's message arrives, causing the agent to miss the user's request.
+			loopState.guidedNudgeSent = true;
+			persistState();
+			sendFollowUp(
+				"⚠️ SYSTEM: This project uses the Product Creation System.\n" +
+				"You MUST follow the workflow in .pi/AGENTS.md — read it now.\n" +
+				"Do NOT write any code until Gates 1 and 2 are approved.\n\n" +
+				"Read ~/.pi/agent/skills/discovery/SKILL.md and begin the discovery process.\n" +
+				"The operator's NEXT message describes what they want to build — use it as discovery input.",
+				false // triggerTurn=false: becomes context, doesn't steal a turn
+			);
 		} else if (loopState.active) {
 			loopState = { ...EMPTY_STATE };
 			persistState();
