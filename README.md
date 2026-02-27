@@ -1,28 +1,32 @@
 # Pi Product System
 
-A product creation system for [Pi coding agent](https://github.com/badlogic/pi-mono/). Describe what you want to build in natural language — the system handles specification, planning, building, reviewing, and publishing.
+A product creation system for the [Pi coding agent](https://github.com/badlogic/pi-mono/). Describe what you want to build in natural language → the system handles discovery, specification, planning, building, testing, reviewing, validation, and publishing — with 3 approval gates.
 
-## Philosophy
+## How it works
 
-Built on three principles, inspired by [Pi](https://github.com/badlogic/pi-mono/) and [NanoClaw](https://github.com/nicobailon/nanoclaw):
+```
+You: "Quero criar um app de lista de compras compartilhado"
 
-1. **Do one thing well** — every feature needs a clear reason to exist
-2. **Extensible, not configurable** — files and skills, not settings menus
-3. **Local and transparent** — no black boxes, no tracking, user controls their data
+→ Discovery (deep interview — no round limit)
+→ Gate 1: "Entendi o que você quer?" (you see brief.md, < 1 page)
+→ Specify + Plan + Analyze loop (internal, automatic)
+→ Gate 2: "Posso começar a construir?" (you see plan summary, zero tech)
+→ Build + Test + Review + Validate (autonomous)
+→ Gate 3: "Funcionou?" (you see product + screenshots + checklist)
+→ Publish (PR + merge + tag + changelog)
+```
 
-The full philosophy is in [product-constitution.md](product-constitution.md).
+You make 3 decisions. The system does everything else.
 
 ## Install
 
 ```bash
-git clone https://github.com/bernajaber/pi-product-system.git
-cd pi-product-system
+git clone https://github.com/bernajaber/pi-product-system.git ~/pi-product-system-repo
+cd ~/pi-product-system-repo
 ./install.sh
 ```
 
-This creates symlinks from the repo to `~/.pi/agent/`. Edit files in the repo — changes take effect immediately in Pi.
-
-To remove: `./uninstall.sh`
+This creates symlinks from the repo to `~/.pi/agent/` — Pi loads them globally.
 
 ## Usage
 
@@ -32,251 +36,75 @@ cd ~/my-product
 pi
 ```
 
-Inside Pi, type `/setup`. The system initializes the project and asks what you want to build.
+Then type `/setup`. The system initializes and asks: "O que você quer construir?"
 
----
+## Architecture (V2)
 
-## The Workflow
+9 skills, each with one input → one output:
 
-### Step 0: Setup (`/setup` command)
+| Skill | Output | What it does |
+|-------|--------|-------------|
+| `discovery` | `brief.md` | Deep interview → understand what to build |
+| `specify` | `spec.md` | Brief → acceptance scenarios (internal) |
+| `plan` | `plan.md` | Spec → atomic tasks + stack (internal) |
+| `analyze` | `critique.md` | Sub-agent consistency check → Gate 2 |
+| `build` | committed code | Plan → implementation, one task per commit |
+| `test` | passing tests | Code → verified acceptance scenarios |
+| `review` | clean code | Code → quality check (UX, visual, constitution) |
+| `validate` | evidence | Browser verification → screenshots → Gate 3 |
+| `publish` | release | PR + merge + tag + changelog + reset |
 
-The `/setup` extension runs deterministically (no LLM interpretation):
+### Quality loops
 
-1. Initializes git if not present
-2. Creates `.pi/AGENTS.md` — the workflow the agent must follow
-3. Creates `.pi/engineering-constitution.md` — technical standards
-4. Creates `.pi/workflow-state.json` — tracks current phase
-5. Makes initial commit
-6. Asks the operator: "What do you want to build?"
+**Document loop** (max 3 cycles): specify → plan → analyze → [issues?] → cascade fix
+- `spec-problem` → specify + plan re-run
+- `plan-problem` → only plan re-runs
 
-### Step 1: Research
+**Code loop** (max 3 cycles): build → test → review → validate → [fail?] → scout diagnoses → surgical fix
 
-When the operator describes what to build, the agent **researches first** before writing anything.
+### Gates
 
-- If a design reference is mentioned (e.g., "inspired by stephango.com"), the agent fetches it, takes screenshots, studies the design patterns
-- If the domain is unfamiliar, the agent researches existing solutions
-- Findings are shown to the operator before proceeding
+| Gate | After | You see | You decide |
+|------|-------|---------|-----------|
+| Gate 1 | Discovery | `brief.md` (< 1 page) | "Entendeu o que quero?" |
+| Gate 2 | Analyze loop | Plan summary in PT (zero tech) | "Vai construir certo?" |
+| Gate 3 | Validate | Product + screenshots + checklist | "Funcionou?" |
 
-Skill: [`product-specify`](skills/product-specify/SKILL.md) (Step 1)
-
-### Step 2: Clarify
-
-The agent asks 3-5 questions about **product behavior** (never technology) in Portuguese. This is mandatory — the agent cannot skip to writing the spec without understanding what the operator wants.
-
-Examples of good questions:
-- "When an item is marked as purchased, should it disappear or stay crossed out?"
-- "Should the blog have an About page, or just posts?"
-
-Examples of questions the agent will NOT ask:
-- "Should I use React or vanilla JS?"
-- "Do you prefer localStorage or a database?"
-
-The agent waits for answers before proceeding.
-
-Skills: [`product-clarify`](skills/product-clarify/SKILL.md), [`product-specify`](skills/product-specify/SKILL.md) (Step 2)
-
-### Step 3: Spec — Gate 1
-
-Based on research + operator's answers, the agent writes a structured spec:
-
-- Description of what gets built
-- Design reference findings
-- Acceptance scenarios (testable, in product language)
-- Assumed decisions (what the agent decided without asking, with justification)
-- Constraints (what's NOT in scope)
-- Review depth classification (simple / medium / complex)
-
-The spec is saved to `.pi/specs/<id>/spec.md` and presented to the operator via the **ask tool** (interactive selection):
-
-- "Aprovado! Pode construir assim"
-- "Quase, mas quero ajustar algumas coisas"
-- "Não é isso, vamos repensar"
-
-Skill: [`product-specify`](skills/product-specify/SKILL.md) (Step 3)
-
-### Step 4: Plan — Gate 2
-
-The agent transforms the approved spec into an atomic build plan:
-
-- Stack choice with justification
-- File structure
-- Ordered tasks — each one produces a working (if incomplete) state
-- Each task maps to acceptance scenarios from the spec
-- Last task is always "Write tests" (mandatory)
-- Risks identified
-
-Presented to the operator in product language ("I'll build in N steps. First step: [what works]. Final step: [complete experience]"). No technology mentioned.
-
-Approval via ask tool:
-
-- "Aprovado! Pode começar a construir"
-- "Quero ajustar a ordem ou o que entra primeiro"
-- "Voltar e repensar o que vai ser feito"
-
-Skill: [`auto-plan`](skills/auto-plan/SKILL.md)
-
-### Step 5: Build — Gate 3
-
-The agent implements the plan task by task:
-
-- **One task = one commit** (atomic, conventional commit messages)
-- After each task: verify it works, commit, move to next
-- Visual verification using `surf` (screenshots) for UI projects
-
-When all tasks are done, the agent enters **self-review**.
-
-Skill: [`build-loop`](skills/build-loop/SKILL.md)
-
-### Step 6: Self-Review
-
-Before showing anything to the operator, the agent reviews its own work:
-
-1. Runs `/review` against the [Review Guidelines](REVIEW_GUIDELINES.md)
-2. Issues classified by severity:
-   - **P0 (Critical)**: blocks usage, data loss, security — must fix
-   - **P1 (Major)**: significant quality issue — should fix
-   - **P2 (Minor)**: polish, style — fix if time allows
-3. If P0/P1 found: fix and re-review (max 3 cycles)
-4. If still failing after 3 cycles: escalate to operator
-
-Subagents available for difficult problems:
-- **[reviewer](agents/reviewer.md)** — fresh-eyes code review
-- **[scout](agents/scout.md)** — debugging and diagnostics
-- **[spec-checker](agents/spec-checker.md)** — verifies code matches spec
-
-Skill: [`build-loop`](skills/build-loop/SKILL.md) (Phase 2)
-
-### Step 7: Validate — Gate 4
-
-The agent verifies the build against every acceptance scenario:
-
-1. Opens the app (via `surf` for visual, `curl` for API)
-2. Walks through each scenario from the spec
-3. Takes screenshots as evidence
-4. Builds a checklist: PASS or FAIL per scenario
-5. If any FAIL: goes back to build, does not present Gate 4
-
-Presented to the operator with the checklist and test instructions:
-
-- "Tudo certo, pode publicar"
-- "Preciso de ajustes (vou descrever)"
-- "Não é isso, preciso repensar"
-
-Skill: [`product-validate`](skills/product-validate/SKILL.md)
-
-### Step 8: Publish (optional)
-
-After Gate 4 approval:
-
-1. Creates PR from feature branch to main
-2. Reviews the PR
-3. Merges (squash)
-4. Updates version and changelog
-5. Deploys (if CI/CD configured)
-
-Skill: [`auto-publish`](skills/auto-publish/SKILL.md)
-
----
-
-## Failure Handling
-
-The build-loop tracks failures and escalates automatically:
-
-| Failures | Action |
-|----------|--------|
-| 1-2 | Retry with different approach |
-| 3 | Launch scout agent for diagnosis |
-| 5 | Switch to heavier model + ask operator |
-| 7 | Partial delivery: ship what works, document what's missing |
-
----
-
-## Interactive Approvals (ask tool)
-
-All gates use the `ask` tool — a Pi extension that presents options via `ctx.ui.select()` (native Pi UI). The operator selects an option or writes a custom response.
-
-No forms, no wizards, no external tools. Just a clean selection in the terminal.
-
-Extension: [`ask-tool.ts`](extensions/ask-tool.ts)
-
----
-
-## Product Constitution
-
-The [Product Constitution](product-constitution.md) defines who the operator is and what they value. The agent reads it at the start of every session. It governs all product decisions.
-
-Core principles:
-1. **Do one thing well** (non-negotiable)
-2. **Pixel perfect design** (non-negotiable)
-3. **Fast or feels fast** (non-negotiable)
-4. **Zero visible bugs** (non-negotiable)
-5. **Radical simplicity**
-6. **Extensible, not configurable**
-7. **Local and transparent**
-
----
-
-## Engineering Constitution
-
-Created per-project by `/setup`. Technical translation of the product principles into actionable standards:
-
-- Visual: mobile-first, 4/8px spacing, typography hierarchy, 44px touch targets
-- Performance: < 1.5s first paint, < 100ms feedback, loading states
-- Quality: test all scenarios, handle edge cases, zero console errors
-- Architecture: minimal dependencies, no premature abstraction
-- Data: local first, exportable, no tracking
-- Process: conventional commits, mandatory tests, trunk-based development
-
----
-
-## Review Guidelines
-
-The [Review Guidelines](REVIEW_GUIDELINES.md) define severity levels for code review:
-
-- **P0 (Critical)**: security vulnerabilities, data loss, crashes, broken core functionality
-- **P1 (Major)**: significant UX issues, missing error handling, performance problems
-- **P2 (Minor)**: code style, naming, minor polish
-
-P0 and P1 must be fixed before Gate 4. P2 is fix-if-time-allows.
-
----
-
-## Structure
+## Repo structure
 
 ```
-pi-product-system/
-├── skills/                     # Pi skills (loaded on demand)
-│   ├── product-specify/        # Research + clarify + spec + Gate 1
-│   ├── product-clarify/        # Behavioral clarification questions
-│   ├── auto-plan/              # Spec → atomic build plan + Gate 2
-│   ├── build-loop/             # Build + self-review + Gate 3
-│   ├── product-validate/       # Verify + checklist + Gate 4
-│   └── auto-publish/           # Branch → PR → merge → deploy
-├── extensions/                 # Pi extensions (always loaded)
-│   ├── product-setup/          # /setup command — deterministic project init
-│   └── ask-tool.ts             # Interactive gate approvals (ctx.ui.select)
-├── agents/                     # Subagent definitions
-│   ├── reviewer.md             # Fresh-eyes code review
-│   ├── scout.md                # Debugging and diagnostics
-│   └── spec-checker.md         # Spec compliance verification
-├── docs/                       # Documentation
-│   ├── WORKFLOW-SPEC.md        # Full technical specification
-│   └── PARA-BERNARDO.md        # System explained for the operator (Portuguese)
-├── product-constitution.md     # Operator's product principles
-├── REVIEW_GUIDELINES.md        # Code review severity standards
-├── TODO.md                     # Implementation roadmap
-├── PROGRESS.md                 # Session-by-session history
-├── CHANGELOG.md                # Release history
-├── install.sh                  # Symlink installer
-└── uninstall.sh                # Clean removal
+skills/           → 9 workflow skills (SKILL.md each)
+extensions/       → /setup command + ask tool for gates
+agents/           → sub-agents: reviewer, scout, spec-checker
+product-constitution.md  → operator's product principles
+REVIEW_GUIDELINES.md     → V2 review criteria (P0-P3)
+docs/ARCHITECTURE-V2.md  → complete V2 specification
+docs/PARA-BERNARDO.md    → non-technical guide for the operator
 ```
 
-## Requirements
+## Design principles
 
-- [Pi coding agent](https://github.com/badlogic/pi-mono/) v0.20+
-- Node.js 20+
-- Git
+From `product-constitution.md`:
 
-## License
+1. **Do one thing well** — each skill has one input, one output, one responsibility
+2. **Pixel perfect design** — no "good enough" in design
+3. **Fast or feels fast** — immediate feedback on every action
+4. **Zero visible bugs** — edge cases handled before Gate 3
+5. **Radical simplicity** — less is more
+6. **Extensible, not configurable** — grows by extension
+7. **Local and transparent** — no black boxes
 
-MIT
+## Uninstall
+
+```bash
+cd ~/pi-product-system-repo
+./uninstall.sh
+```
+
+Removes all symlinks. Pi works normally without the product system.
+
+## Documentation
+
+- **For the operator** (non-technical): `docs/PARA-BERNARDO.md`
+- **Architecture details**: `docs/ARCHITECTURE-V2.md`
+- **Implementation plan**: `TODO.md`
