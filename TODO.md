@@ -127,6 +127,12 @@
       - Our build-loop/product-validate skills hardcode `surf` commands — if agent uses
         another skill, output is incompatible
 
+      **Note: none of these are MCP servers.** All three are CLI tools with a daemon pattern
+      (first bash call starts the daemon, subsequent calls use a Unix socket). The daemon
+      runs in background and does NOT consume context window. Context cost comes from
+      reading the SKILL.md: surf=545 lines, agent-browser=252 lines, web-browser=91 lines.
+      Skills are loaded on-demand (only when the agent reads the file), not at startup.
+
       **Investigation steps:**
       1. Confirm `web-browser` (mitsupi) fails in a real project (no `./scripts/` dir)
       2. Decide: keep `agent-browser` installed or remove it? (it's not in pi packages,
