@@ -89,15 +89,19 @@
       add `gh repo create <project-name> --private --source=. --push` to the /setup extension
       after the initial commit. Ask the operator if they want public or private repo.
 
-- [ ] **FIX: /loop self confusion** — agent confused the build loop command with the
-      review_loop tool. Observed reasoning: "The build-loop skill says /loop self. This is a
-      self-review loop. Let me start the review_loop." — completely wrong interpretation.
-      Root cause: the names are too similar (/loop = loop.ts build loop, review_loop = pi-review-loop tool).
-      Fix: rewrite the build-loop SKILL.md to be explicit:
-        - "/loop self" is a SLASH COMMAND from the loop.ts extension (type it in the chat input)
-        - "review_loop" is a SEPARATE TOOL only used for self-review AFTER build is complete
-        - They are NOT the same thing. Do NOT confuse them.
-      Add a ⚠️ WARNING box at the top of build-loop/SKILL.md with this distinction.
+- [ ] **FIX: /loop self confusion — rename, don't remove** — agent confused the build loop
+      command with the review_loop tool. Root cause: same word "loop" in both names.
+      
+      Analysis: /loop self IS implementing the Ralph Loop pattern (autonomous persistence
+      across turns, compaction-aware, status widget). It has real value and should be kept.
+      The problem is naming, not the mechanism.
+      
+      Fix: in build-loop/SKILL.md, never refer to it as "/loop self" in prose. Instead:
+        - Call it "the autonomous build loop" or "Ralph Loop" in descriptions
+        - Show the actual command only when needed: "start it with `/loop self` in the chat"
+        - Add explicit separation: "This is NOT the review_loop tool. review_loop = code review.
+          /loop self = autonomous build persistence. Completely different things."
+        - Consider renaming the phase in AGENTS.md: "Ralph Loop phase" vs "self-review phase"
 
 - [ ] **FIX: browser verification being skipped** — product-validate ran without using any
       browser tool for visual verification. Confirmed surf doesn't work without Chrome open.
