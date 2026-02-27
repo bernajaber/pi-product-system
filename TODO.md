@@ -59,17 +59,17 @@
 ## In Progress
 
 ### Phase 8: End-to-End Pilot
-- [~] Test with real product: personal blog (~/bernardo-blog)
-- [ ] /setup runs correctly and initializes project
-- [ ] ask-tool works for gate approvals (interactive selection)
-- [ ] product-specify: researches references before writing spec
-- [ ] product-specify: presents Gate 1 via ask tool
-- [ ] auto-plan: creates plan and presents Gate 2 via ask tool
-- [ ] build-loop: implements task by task with commits
-- [ ] build-loop: self-review catches issues
-- [ ] product-validate: screenshots + checklist + Gate 3
-- [ ] Full flow completes without manual intervention between gates
-- [ ] Blog is functional, designed, and has 3 philosophy posts
+- [x] Test with real product: personal CRM (~/personal-crm) — pilot ran successfully
+- [x] /setup runs correctly and initializes project
+- [x] ask-tool works for gate approvals (interactive selection)
+- [x] product-specify: researches references before writing spec
+- [x] product-specify: presents Gate 1 via ask tool
+- [x] auto-plan: creates plan and presents Gate 2 via ask tool
+- [x] build-loop: implements task by task with commits
+- [ ] build-loop: self-review catches issues — agent confused /loop self with review_loop tool
+- [ ] product-validate: screenshots + checklist + Gate 3 — browser verification skipped
+- [x] Full flow completes without manual intervention between gates
+- [~] Blog is functional, designed, and has 3 philosophy posts — replaced by personal-crm pilot
 
 ---
 
@@ -81,6 +81,34 @@
 - [ ] Test uninstall.sh + reinstall.sh cycle
 - [ ] Edge case: what happens if agent ignores AGENTS.md? Document recovery steps
 - [ ] Edge case: what happens mid-build if context compacts? Verify workflow-state survives
+
+### Phase 14: Pilot Fixes (observed in personal-crm pilot — 2026-02-26)
+
+- [ ] **FIX: /setup should create GitHub remote** — today the project is initialized locally
+      but no remote is created. The auto-publish skill needs `gh repo create` to work. Fix:
+      add `gh repo create <project-name> --private --source=. --push` to the /setup extension
+      after the initial commit. Ask the operator if they want public or private repo.
+
+- [ ] **FIX: /loop self confusion** — agent confused the build loop command with the
+      review_loop tool. Observed reasoning: "The build-loop skill says /loop self. This is a
+      self-review loop. Let me start the review_loop." — completely wrong interpretation.
+      Root cause: the names are too similar (/loop = loop.ts build loop, review_loop = pi-review-loop tool).
+      Fix: rewrite the build-loop SKILL.md to be explicit:
+        - "/loop self" is a SLASH COMMAND from the loop.ts extension (type it in the chat input)
+        - "review_loop" is a SEPARATE TOOL only used for self-review AFTER build is complete
+        - They are NOT the same thing. Do NOT confuse them.
+      Add a ⚠️ WARNING box at the top of build-loop/SKILL.md with this distinction.
+
+- [ ] **FIX: browser verification being skipped** — product-validate ran without using any
+      browser tool for visual verification. Confirmed surf doesn't work without Chrome open.
+      Blocked by Phase 13 (migrate to agent-browser). Once agent-browser is in place, add
+      a hard requirement to product-validate: "Verification MUST include at least one
+      screenshot. If no screenshot is taken, do NOT present Gate 3."
+
+- [ ] **IMPROVE: interview/specify process too weak for complex products** — the clarification
+      phase works acceptably for small/simple products but will not scale to complex ones.
+      The agent asks superficial questions or skips to spec too quickly.
+      Needs more structure and energy — dedicated investigation in Phase 12 audit.
 
 ### Phase 11: Extensions (post-pilot)
 - [ ] Evaluate: git-checkpoint extension (auto-stash per turn)
