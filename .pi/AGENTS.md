@@ -11,9 +11,33 @@
 
 ## What this repo is
 
-A set of skills, extensions, and agents for Pi that enable product creation through natural conversation. The operator describes what to build → the system handles spec, plan, build, review, and publish.
+A set of skills, extensions, and agents for Pi that enable product creation through natural conversation. The operator describes what to build → the system handles discovery, spec, plan, build, test, review, validate, and publish.
 
-### How the system builds products
+### Architecture (V2)
+
+See `docs/ARCHITECTURE-V2.md` for the complete specification.
+
+**9 skills, each with one input → one output:**
+
+| Skill | Output | Purpose |
+|-------|--------|---------|
+| `discovery` | `brief.md` | Deep interview → understand what to build |
+| `specify` | `spec.md` | Brief → acceptance scenarios |
+| `plan` | `plan.md` | Spec → atomic tasks + stack + structure |
+| `analyze` | `critique.md` | Sub-agent consistency check + Gate 2 |
+| `build` | committed code | Plan → implementation (/loop self) |
+| `test` | passing tests | Code → verified scenarios (/loop tests) |
+| `review` | clean code | Code → quality check (P0/P1 criteria) |
+| `validate` | evidence | Code → browser verification + Gate 3 |
+| `publish` | release | Gate 3 → PR + merge + tag + changelog |
+
+**3 gates:** Gate 1 (brief), Gate 2 (plan summary), Gate 3 (verified product)
+
+**2 quality loops:**
+- Documents: specify → plan → analyze → [cascade fix] → max 3 cycles
+- Code: build → test → review → validate → [scout → surgical fix] → max 3 cycles
+
+### How products are built
 
 Products are NOT built here. Each product gets its own folder and git repo:
 
@@ -21,57 +45,46 @@ Products are NOT built here. Each product gets its own folder and git repo:
 ~/pi-product-system-repo/   ← THIS REPO. The system. Skills, extensions, agents.
 ~/.pi/agent/                ← Symlinks pointing here. Pi loads them globally.
 ~/my-product/               ← A PRODUCT. Created by the operator. Has its own git.
-~/another-product/          ← Another product. Independent.
 ```
-
-The workflow for building a product:
-1. Operator creates a folder: `mkdir ~/my-product && cd ~/my-product`
-2. Opens Pi: `pi`
-3. Types `/setup` → deterministic extension initializes git, AGENTS.md, engineering standards
-4. Describes what to build → agent follows: research → clarify → spec (Gate 1) → plan (Gate 2) → build (Gate 3) → validate
-5. Each gate uses the `ask` tool for interactive approval
 
 ### Components
 
 | Component | Location | Purpose |
 |-----------|----------|---------|
-| Skills | `skills/` | On-demand workflow steps (specify, plan, build, validate, clarify, publish) |
-| Extensions | `extensions/` | Always-loaded: `/setup` command, `ask` tool for gates |
-| Agents | `agents/` | Subagents for review, debugging, spec checking |
-| Constitution | `product-constitution.md` | Operator's product principles — read every session |
-| Guidelines | `REVIEW_GUIDELINES.md` | Code review severity levels (P0/P1/P2) |
+| Skills | `skills/` | 9 workflow steps (discovery → publish) |
+| Extensions | `extensions/` | `/setup` command, `ask` tool for gates |
+| Agents | `agents/` | Sub-agents: reviewer, scout, spec-checker |
+| Constitution | `product-constitution.md` | Operator's product principles |
+| Guidelines | `REVIEW_GUIDELINES.md` | V2 review severity (P0-P3) |
+| Architecture | `docs/ARCHITECTURE-V2.md` | Complete V2 specification |
 
 ## Session routine
 
 ### Start
 1. `git log --oneline -5` — recent changes
-2. Read `PROGRESS.md` — last entry only
-3. Read `TODO.md` — next pending task
-4. Confirm with operator: "Continuing from [state]. Next: [task]."
+2. Read `TODO.md` — next pending task
+3. Confirm with operator: "Continuing from [state]. Next: [task]."
 
 ### End
 1. Update `TODO.md` checkboxes
-2. Add entry to `PROGRESS.md`
-3. Update `CHANGELOG.md` if user-facing changes were made
-4. `git add . && git commit -m "[type]: [summary]"`
-5. `git push origin main`
-6. Confirm with operator: "Session done. [summary]. Next: [task]."
+2. Update `CHANGELOG.md` if user-facing changes were made
+3. `git add . && git commit -m "[type]: [summary]"`
+4. `git push origin main`
+5. Confirm with operator: "Session done. [summary]. Next: [task]."
 
 ## Rules
 
 ### Editing skills and extensions
-- After any change: verify Pi loads without errors (`cd /tmp && pi -p "list skills"`)
-- Test in `~/pi-system-test/` before testing in a real project
+- After any change: verify Pi loads without errors
 - Symlinks mean changes here take effect immediately — no need to re-run install.sh
 
 ### Testing the system
-- **Quick check**: `cd /tmp && pi -p "list skills that contain product"` — verify skills load
-- **Full test**: `mkdir ~/pi-system-test && cd ~/pi-system-test && pi` → run `/setup` → test workflow
-- **Pilot product**: `~/bernardo-blog/` — the ongoing end-to-end test
+- **Quick check**: `cd /tmp && pi -p "list skills"` — verify skills load
+- **Full test**: `mkdir /tmp/pi-test && cd /tmp/pi-test && pi` → run `/setup` → test workflow
 
 ### File conventions
 - All files in English
-- Skills: `skills/<name>/SKILL.md` — follow existing template structure
+- Skills: `skills/<name>/SKILL.md`
 - Extensions: `extensions/<name>/index.ts` or `extensions/<name>.ts`
 - Agents: `agents/<name>.md`
 
@@ -79,9 +92,8 @@ The workflow for building a product:
 - Do not edit files in `~/.pi/agent/` directly — edit here, symlinks handle the rest
 - Do not add Pi config files (settings.json, auth.json) to this repo
 - Do not add product code here — this repo is the system, not a product
-- Do not create product specs, plans, or code in this repo
 
 ### Communication
 - Always in Portuguese with the operator
 - Describe consequences, not implementation
-- When proposing changes to skills/extensions: explain what the OPERATOR will experience differently
+- When proposing changes: explain what the OPERATOR will experience differently

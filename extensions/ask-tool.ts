@@ -13,9 +13,9 @@ Use at workflow gates and for any decision that needs explicit operator approval
 Options should be in Portuguese (the operator's language). The operator can always write a custom response.
 
 Use cases:
-- Gate 1: confirm spec and assumed decisions
-- Gate 2: confirm build plan
-- Gate 3: final validation before publishing`,
+- Gate 1: confirm brief and direction
+- Gate 2: confirm plan summary (zero technology)
+- Gate 3: verified product, approve release`,
 		parameters: Type.Object({
 			questions: Type.Array(
 				Type.Object({

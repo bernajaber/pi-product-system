@@ -1,13 +1,13 @@
 #!/bin/bash
 set -e
 
-# Pi Product System — Uninstaller
+# Pi Product System — Uninstaller (V2)
 # Removes symlinks created by install.sh
 
 PI_DIR="$HOME/.pi/agent"
 
-echo "Pi Product System — Uninstall"
-echo "=============================="
+echo "Pi Product System V2 — Uninstall"
+echo "================================="
 
 # Only remove symlinks — never delete actual files
 remove_link() {
@@ -21,9 +21,17 @@ remove_link() {
   fi
 }
 
-# Skills
-for skill in product-specify auto-plan build-loop product-validate product-clarify auto-publish; do
+# Skills (V2 — 9 skills)
+for skill in discovery specify plan analyze build test review validate publish; do
   remove_link "$PI_DIR/skills/$skill" "skills/$skill"
+done
+
+# Also clean up V1 skill names if they exist as symlinks
+for skill in product-specify product-clarify auto-plan build-loop product-validate auto-publish; do
+  if [ -L "$PI_DIR/skills/$skill" ]; then
+    rm "$PI_DIR/skills/$skill"
+    echo "✓ Removed V1 skills/$skill"
+  fi
 done
 
 # Extensions

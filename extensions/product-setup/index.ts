@@ -10,42 +10,94 @@ import { execSync } from "node:child_process";
 
 const AGENTS_MD = `# Product System — Active Project
 
-> This project uses the Product Creation System.
+> This project uses the Pi Product Creation System (V2).
 > The agent MUST follow the workflow below. No code before Gates 1 and 2 are approved.
 
 ## Workflow
 
-### Gate 1: Spec
-Use skill \`product-specify\` (read \`~/.pi/agent/skills/product-specify/SKILL.md\`).
-- Output: \`.pi/specs/<id>/spec.md\`
-- Present to operator in Portuguese
-- Wait for approval before proceeding
+### Phase 1: Discovery → Gate 1
+Use skill \`discovery\` (read \`~/.pi/agent/skills/discovery/SKILL.md\`).
+- Deep interview with the operator — no round limit
+- Output: \`.pi/specs/<id>/brief.md\` (< 1 page, 6 sections)
+- Present Gate 1: "Entendi direito o que você quer construir?"
+- Wait for operator approval before proceeding
 
-### Gate 2: Plan
-Use skill \`auto-plan\` (read \`~/.pi/agent/skills/auto-plan/SKILL.md\`).
-- Output: \`.pi/specs/<id>/plan.md\`
-- Present to operator in Portuguese
-- Wait for approval before proceeding
+### Phase 2: Specify
+Use skill \`specify\` (read \`~/.pi/agent/skills/specify/SKILL.md\`).
+- Input: approved brief.md
+- Output: \`.pi/specs/<id>/spec.md\` (internal — operator never sees this)
+- No operator interaction
 
-### Gate 3: Build + Review
-Use skill \`build-loop\` (read \`~/.pi/agent/skills/build-loop/SKILL.md\`).
-- One task = one commit
-- Self-review after all tasks
-- Use skill \`product-validate\` for final check
+### Phase 3: Plan
+Use skill \`plan\` (read \`~/.pi/agent/skills/plan/SKILL.md\`).
+- Input: spec.md
+- Output: \`.pi/specs/<id>/plan.md\` (internal — operator never sees this)
+- No operator interaction
 
-### Rules
-- Research BEFORE specifying: if the operator mentions a reference, study it in depth first
-- Use the \`ask\` tool for gate approvals (interactive selection). Do NOT use the \`interview\` tool or any form/wizard.
+### Phase 4: Analyze Loop → Gate 2
+Use skill \`analyze\` (read \`~/.pi/agent/skills/analyze/SKILL.md\`).
+- Sub-agent reviews brief + spec + plan + constitutions
+- Output: \`.pi/specs/<id>/critique.md\` (internal)
+- Cascade: spec-problem → specify + plan re-run. plan-problem → only plan re-runs.
+- Max 3 cycles. If unresolved → escalate to operator.
+- Present Gate 2: product-language summary of build etapas (ZERO technology)
+- Wait for operator approval before proceeding
+
+### Phase 5: Build
+Use skill \`build\` (read \`~/.pi/agent/skills/build/SKILL.md\`).
+- Input: approved plan.md
+- \`/loop self\` — one task = one commit
+- Does NOT write tests or review code
+
+### Phase 6: Test
+Use skill \`test\` (read \`~/.pi/agent/skills/test/SKILL.md\`).
+- \`/loop tests\` — objective condition: all tests green
+- Node.js assert, no external frameworks
+
+### Phase 7: Review
+Use skill \`review\` (read \`~/.pi/agent/skills/review/SKILL.md\`).
+- \`/review uncommitted\` — catches what tests can't: UX, visual, constitution violations
+- P0/P1 must be fixed (max 3 cycles)
+
+### Phase 8: Validate → Gate 3
+Use skill \`validate\` (read \`~/.pi/agent/skills/validate/SKILL.md\`).
+- Opens browser, walks through ALL acceptance scenarios
+- Screenshots as evidence
+- Present Gate 3: product + screenshots + checklist
+- If scenario fails → code quality loop (scout diagnoses → surgical fix → test/review/validate again)
+
+### Phase 9: Publish
+Use skill \`publish\` (read \`~/.pi/agent/skills/publish/SKILL.md\`).
+- After Gate 3 approval
+- PR + merge + tag + changelog + reset
+
+## Gates Summary
+
+| Gate | After | Operator sees | Operator decides |
+|------|-------|---------------|------------------|
+| Gate 1 | Discovery | brief.md (< 1 page) | "Entendeu o que quero?" |
+| Gate 2 | Analyze loop | Plan summary in PT (zero tech) | "Vai construir certo?" |
+| Gate 3 | Validate | Product + screenshots + checklist | "Funcionou?" |
+
+## Quality Loops
+
+**Document loop (max 3 cycles):** specify → plan → analyze → [issues?] → cascade fix → analyze again
+**Code loop (max 3 cycles):** build → test → review → validate → [fail?] → scout → surgical fix → test/review/validate again
+
+## Rules
+- Use the \`ask\` tool for gate approvals. Do NOT use the \`interview\` tool.
 - All artifacts (specs, plans, code, commits) in ENGLISH. Only operator communication in Portuguese.
+- Research BEFORE asking questions in discovery: if the operator mentions a reference, study it first.
+- Escalation messages describe consequences for the user, never the technical problem.
 
-### References
+## References
 - Product Constitution: \`~/.pi/agent/product-constitution.md\`
 - Review Guidelines: \`~/.pi/agent/REVIEW_GUIDELINES.md\`
 - Engineering Constitution: \`.pi/engineering-constitution.md\`
 
 ## Product Context
 
-<!-- FILL THIS SECTION after /setup completes -->
+<!-- FILL THIS SECTION after discovery completes -->
 `;
 
 const ENGINEERING_CONSTITUTION = `# Engineering Constitution
@@ -55,7 +107,7 @@ const ENGINEERING_CONSTITUTION = `# Engineering Constitution
 > When in doubt, refer to ~/.pi/agent/product-constitution.md — it takes precedence.
 
 ## I. Do One Thing Well → Scope Discipline
-- Every feature must have a clear "why" documented in the spec
+- Every feature must have a clear "why" documented in the brief
 - If a feature's purpose can't be explained in one sentence, split or cut
 - Default answer to "should we add X?" is NO unless there's a clear user problem
 
@@ -107,7 +159,7 @@ const ENGINEERING_CONSTITUTION = `# Engineering Constitution
 - Conventional commits: feat:, fix:, refactor:, test:, chore:, docs:
 
 ### Testing
-- Every plan includes a "Write tests" task (mandatory, last task)
+- Every plan includes a "Write Tests" task (mandatory, last task)
 - Tests use Node.js assert — no external test framework for simple projects
 - Tests cover all acceptance scenarios from the spec
 
@@ -121,6 +173,24 @@ const WORKFLOW_STATE = JSON.stringify(
   {
     currentPhase: "init",
     feature: null,
+    gates: {
+      briefApproved: false,
+      planApproved: false,
+      releaseApproved: false,
+    },
+    analyzeLoop: {
+      cycle: 0,
+      maxCycles: 3,
+      lastIssueType: null,
+      lastIssueSummary: null,
+    },
+    codeLoop: {
+      cycle: 0,
+      maxCycles: 3,
+      lastFailedScenario: null,
+      lastDiagnosis: null,
+      lastReentryTask: null,
+    },
     failureCount: 0,
   },
   null,
@@ -130,9 +200,9 @@ const WORKFLOW_STATE = JSON.stringify(
 const REVIEW_GUIDELINES = `# Review Guidelines
 
 > Project-specific review rules. Loaded automatically by the /review extension.
-> Updated by auto-plan with technical decisions after Gate 2.
+> Updated by the plan skill with technical decisions.
 
-## Product Principles (always apply)
+## Product Principles (from Product Constitution — always apply)
 
 - Every feature, button, and function must have a clear reason to exist. If not obvious, flag it.
 - Visual interface must be flawless: alignment, spacing, typography, visual hierarchy. No "close enough."
@@ -143,19 +213,26 @@ const REVIEW_GUIDELINES = `# Review Guidelines
 - No premature abstraction. Duplication is better than the wrong abstraction.
 - Local first. No tracking, no hidden telemetry. User data must be exportable.
 
+## V2 Review Criteria (code already passed tests — focus on what tests can't catch)
+
+| Severity | What it catches | Action |
+|----------|----------------|--------|
+| P0 — blocks release | Breaks something tests missed: impossible UI state, visual crash, data loss, security | MUST fix |
+| P1 — urgent | Violates Product Constitution: slow, no feedback, not responsive, too complex, faltou carinho | MUST fix |
+| P2 — normal | Code quality: bad naming, dead code, unused imports, inconsistent patterns | Informational |
+| P3 — suggestion | Nice to have: better abstractions, minor optimizations | Informational |
+
 ## Code Review Focus
 
 - Flag dead code, unused imports, and leftover debug statements
 - Flag inconsistent naming or file organization
 - Flag missing error handling for user-facing operations
-- Flag accessibility issues in UI code (missing alt text, keyboard navigation, contrast)
-- Flag hardcoded values that should be constants or configuration
-- Prefer fail-fast behavior over logging-and-continue patterns
+- Flag accessibility issues: missing alt text, keyboard navigation, contrast
+- Flag hardcoded values that should be constants
 
 ## Technical Standards
 
-<!-- AUTO-PLAN UPDATES THIS SECTION after Gate 2 -->
-<!-- Stack, architecture, and project-specific rules go here -->
+<!-- Plan skill updates this section with project-specific rules -->
 `;
 
 const GITIGNORE = `node_modules/
@@ -231,7 +308,7 @@ export default function (pi: ExtensionAPI) {
 
 Ask the operator IN PORTUGUESE: **"Tudo pronto! O que você quer construir?"**
 
-When the operator responds, follow the workflow in .pi/AGENTS.md: start with Gate 1 (product-specify skill).`,
+When the operator responds, follow the workflow in .pi/AGENTS.md: start with the discovery skill (read ~/.pi/agent/skills/discovery/SKILL.md).`,
         { deliverAs: "followUp" }
       );
     },

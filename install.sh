@@ -1,84 +1,65 @@
 #!/bin/bash
 set -e
 
-# Pi Product System — Installer
+# Pi Product System — Installer (V2)
 # Creates symlinks from this repo to ~/.pi/agent/
 
-REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PI_DIR="$HOME/.pi/agent"
 
-echo "Pi Product System — Install"
-echo "==========================="
-echo "Repo:   $REPO_DIR"
-echo "Target: $PI_DIR"
-echo ""
+echo "Pi Product System V2 — Install"
+echo "==============================="
 
-# Ensure target directories exist
+# Create target directories if they don't exist
 mkdir -p "$PI_DIR/skills"
 mkdir -p "$PI_DIR/extensions"
 mkdir -p "$PI_DIR/agents"
 
-# --- Skills ---
-SKILLS=(product-specify auto-plan build-loop product-validate product-clarify auto-publish)
-for skill in "${SKILLS[@]}"; do
-  target="$PI_DIR/skills/$skill"
-  if [ -L "$target" ]; then
-    rm "$target"
-  elif [ -d "$target" ]; then
-    echo "⚠️  $target exists and is not a symlink. Skipping (backup manually if needed)."
-    continue
+# Helper: create symlink (backup existing non-symlink files)
+link() {
+  local src="$1"
+  local dest="$2"
+  local name="$3"
+
+  if [ -L "$dest" ]; then
+    rm "$dest"
+  elif [ -e "$dest" ]; then
+    mv "$dest" "${dest}.bak"
+    echo "  ↳ Backed up existing $name"
   fi
-  ln -s "$REPO_DIR/skills/$skill" "$target"
-  echo "✓ skills/$skill"
+
+  ln -s "$src" "$dest"
+  echo "✓ $name"
+}
+
+# Skills (V2 — 9 skills)
+for skill in discovery specify plan analyze build test review validate publish; do
+  if [ -d "$SCRIPT_DIR/skills/$skill" ]; then
+    link "$SCRIPT_DIR/skills/$skill" "$PI_DIR/skills/$skill" "skills/$skill"
+  else
+    echo "⚠️  skills/$skill not found in repo — skipping"
+  fi
 done
 
-# --- Extensions ---
-# product-setup (directory)
-target="$PI_DIR/extensions/product-setup"
-if [ -L "$target" ]; then rm "$target"; fi
-if [ -d "$target" ] && [ ! -L "$target" ]; then
-  echo "⚠️  $target exists and is not a symlink. Skipping."
-else
-  ln -s "$REPO_DIR/extensions/product-setup" "$target"
-  echo "✓ extensions/product-setup"
-fi
+# Extensions
+link "$SCRIPT_DIR/extensions/product-setup" "$PI_DIR/extensions/product-setup" "extensions/product-setup"
+link "$SCRIPT_DIR/extensions/ask-tool.ts" "$PI_DIR/extensions/ask-tool.ts" "extensions/ask-tool.ts"
 
-# ask-tool.ts (single file)
-target="$PI_DIR/extensions/ask-tool.ts"
-if [ -L "$target" ]; then rm "$target"; fi
-if [ -f "$target" ] && [ ! -L "$target" ]; then
-  echo "⚠️  $target exists and is not a symlink. Skipping."
-else
-  ln -s "$REPO_DIR/extensions/ask-tool.ts" "$target"
-  echo "✓ extensions/ask-tool.ts"
-fi
-
-# --- Agents ---
-AGENTS=(reviewer.md scout.md spec-checker.md)
-for agent in "${AGENTS[@]}"; do
-  target="$PI_DIR/agents/$agent"
-  if [ -L "$target" ]; then rm "$target"; fi
-  if [ -f "$target" ] && [ ! -L "$target" ]; then
-    echo "⚠️  $target exists and is not a symlink. Skipping."
-    continue
-  fi
-  ln -s "$REPO_DIR/agents/$agent" "$target"
-  echo "✓ agents/$agent"
+# Agents
+for agent in reviewer.md scout.md spec-checker.md; do
+  link "$SCRIPT_DIR/agents/$agent" "$PI_DIR/agents/$agent" "agents/$agent"
 done
 
-# --- Root files ---
-for file in product-constitution.md REVIEW_GUIDELINES.md; do
-  target="$PI_DIR/$file"
-  if [ -L "$target" ]; then rm "$target"; fi
-  if [ -f "$target" ] && [ ! -L "$target" ]; then
-    echo "⚠️  $target exists and is not a symlink. Backing up to ${target}.bak"
-    mv "$target" "${target}.bak"
-  fi
-  ln -s "$REPO_DIR/$file" "$target"
-  echo "✓ $file"
-done
+# Root files
+link "$SCRIPT_DIR/product-constitution.md" "$PI_DIR/product-constitution.md" "product-constitution.md"
+link "$SCRIPT_DIR/REVIEW_GUIDELINES.md" "$PI_DIR/REVIEW_GUIDELINES.md" "REVIEW_GUIDELINES.md"
 
 echo ""
-echo "✅ Done! All components symlinked."
+echo "✅ Done! Product System V2 installed."
 echo ""
-echo "Test: open Pi in any directory and type /setup"
+echo "Skills: discovery, specify, plan, analyze, build, test, review, validate, publish"
+echo "Extensions: product-setup (/setup command), ask-tool"
+echo "Agents: reviewer, scout, spec-checker"
+echo ""
+echo "To start a new product: mkdir ~/my-product && cd ~/my-product && pi"
+echo "Then type: /setup"
