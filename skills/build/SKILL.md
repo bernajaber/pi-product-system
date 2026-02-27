@@ -1,6 +1,6 @@
 ---
 name: build
-description: "Implement features from the plan, one task per commit. Uses /loop self for autonomous persistence. Does NOT write tests or review code."
+description: "Implement features from the plan, one task per commit. Autonomous — the product-loop governs iteration. Does NOT write tests or review code."
 ---
 
 # Build Skill
@@ -23,22 +23,7 @@ ONE thing: implement the tasks from the plan as working code.
 
 ## Process
 
-### Step 1: Start the build loop
-
-**MANDATORY — do this FIRST, before any code changes.**
-
-`/loop self` is a slash command that the OPERATOR types, not a tool you call. You cannot invoke it yourself. Ask the operator to activate it:
-
-Tell the operator in Portuguese:
-> "Para eu trabalhar autonomamente, por favor digite `/loop self` no chat."
-
-Then STOP and WAIT for the loop to activate. You'll know it's active when you receive a follow-up message saying "Continue until you are done."
-
-**If the operator doesn't activate the loop** (or you're unsure if it's active): implement ONE task at a time, commit it, then STOP. The operator will say "continue" or send you a message to proceed to the next task. Do NOT try to implement all tasks in a single turn — this generates too much output and crashes the session.
-
-**When all build tasks are done:** call the `signal_loop_success` tool to end the loop.
-
-### Step 2: Read the plan
+### Step 1: Read the plan
 
 Read `.pi/specs/<feature>/plan.md`. Note:
 - The ordered list of tasks
@@ -48,7 +33,7 @@ Read `.pi/specs/<feature>/plan.md`. Note:
 
 **IMPORTANT:** The last task in the plan is "Write Tests". Skip it — that's the `test` skill's job. Build implements all tasks EXCEPT the test task.
 
-### Step 3: Implement tasks one at a time
+### Step 2: Implement tasks one at a time
 
 For each task (except "Write Tests"):
 1. Implement the task according to the plan
@@ -59,27 +44,39 @@ For each task (except "Write Tests"):
    git commit -m "feat(<scope>): <what this task did>"
    ```
 4. Confirm the commit: `git log --oneline -1`
-5. Move to the next task
+5. Update progress in `.pi/workflow-state.json`:
+   ```json
+   { "task": N, "of": TOTAL, "status": "ok" }
+   ```
+   Where N = number of tasks completed, TOTAL = total build tasks (excluding Write Tests).
+6. Move to the next task
 
 **⚠️ RULE: One task = one commit. Do NOT implement multiple tasks then commit once.**
 
-### Step 4: Finish the loop
+### Step 3: Update state when done
 
 When ALL build tasks are done (each with its own commit):
+- Update progress: `{ task: TOTAL, of: TOTAL, status: "ok" }`
+- The product-loop will handle the transition to the test phase
 
-```
-signal_loop_success
-```
+## How the loop works
 
-### Step 5: Update state
+The product-loop extension governs this phase automatically:
 
-Update `workflow-state.json`: set `currentPhase: "test"`.
+1. You enter the build phase (currentPhase: "build")
+2. Product-loop sends you a follow-up: "Implement Task N from the plan"
+3. You implement, commit, update progress
+4. Product-loop detects the update, sends next follow-up
+5. When all tasks done: product-loop transitions to test phase
+
+**You don't need to type any commands.** Just implement, commit, update progress.
+
+**If you get stuck:** Update progress status to `"stuck"`. The product-loop will shift to diagnostic mode and help you troubleshoot. If still stuck after 2 turns, it will escalate to the operator.
 
 ## Verification during build
 
 For static HTML/JS apps, verify visually using `file://` protocol — NO server needed:
 ```bash
-# Open the file in agent-browser or check DOM structure
 cat index.html | head -50
 ```
 
@@ -91,19 +88,6 @@ kill %1
 ```
 
 **Do NOT start long-running dev servers during build.** The bash tool cannot handle background processes reliably.
-
-## Failure escalation
-
-Track `failureCount` in `workflow-state.json`:
-
-| Count | Action |
-|-------|--------|
-| 1-2 | Retry with a different approach |
-| 3 | Launch scout: use `scout` agent to diagnose the problem |
-| 5 | Switch to a more powerful model + inform operator |
-| 7 | Partial delivery: commit what works, document what's missing |
-
-Reset `failureCount` to 0 when the problem is resolved.
 
 ## Git safety
 
@@ -117,6 +101,6 @@ This blocks pushes to main unless Gate 3 is approved.
 
 - Follow the plan's task order. Tasks are ordered so each produces a working (if incomplete) state.
 - First task should produce something visible (even if minimal).
-- If a task is unclear or seems wrong, re-read the plan. If still unclear, flag it — don't guess.
+- If a task is unclear or seems wrong, re-read the plan. If still unclear, report stuck — don't guess.
 - Conventional commits: `feat:`, `fix:`, `refactor:`, `chore:`.
 - Do NOT use the `interview` tool or the `ask` tool. This skill has no operator interaction.

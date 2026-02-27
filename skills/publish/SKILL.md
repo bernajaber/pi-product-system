@@ -76,13 +76,15 @@ gh pr checks --watch
 
 **Do NOT merge a PR with failing CI.**
 
-### Step 5: Review the PR
+### Step 5: Include review summary in PR
 
+Update the PR body to include what the review phase found and fixed:
+
+```bash
+gh pr edit --body "<updated body with review findings summary>"
 ```
-/review branch main
-```
-- If P0/P1: fix → push → re-review
-- When clean: `/end-review`
+
+The code was already reviewed in the review phase. No second review needed here.
 
 ### Step 6: Merge the PR
 

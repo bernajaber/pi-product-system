@@ -1,6 +1,6 @@
 ---
 name: test
-description: "Write and run automated tests for all acceptance scenarios. Uses /loop tests — objective exit condition: all tests green."
+description: "Write and run automated tests for all acceptance scenarios. Autonomous — the product-loop governs iteration until all tests pass."
 ---
 
 # Test Skill
@@ -49,19 +49,15 @@ For static HTML/JS apps: parse the HTML, simulate interactions via JS/DOM, asser
 For apps with logic: test the logic functions directly.
 For apps that are purely visual with no testable logic: validate HTML files exist, are well-formed, and contain expected content.
 
-### Step 4: Run tests with /loop
+### Step 4: Run tests
 
-`/loop tests` is a slash command that the OPERATOR types, not a tool you call. Ask the operator to activate it:
+Run the tests:
+```bash
+node tests/<feature>.test.js
+```
 
-Tell the operator in Portuguese:
-> "Testes escritos. Para rodar em loop até passarem, por favor digite `/loop tests` no chat."
-
-Then STOP and WAIT for the loop to activate. The loop runs tests with an objective exit condition: all tests pass (exit code 0).
-- If tests fail → the loop retries automatically after you fix the issue
-- Fix the code or the test (if the test is wrong), then let the loop re-run
-- When all tests pass → call `signal_loop_success` to end the loop
-
-**If the operator doesn't activate the loop:** run the tests manually with `node tests/<feature>.test.js`. If they fail, fix and re-run. Repeat until green.
+- **If tests pass:** Update progress to `{ task: 1, of: 1, status: "ok" }` — marks test phase as complete. The product-loop will trigger the transition to review.
+- **If tests fail:** Read the error output, fix the issue (it might be in the code, not the test), and run again. Update progress status to `"stuck"` if you can't get them to pass after a reasonable attempt.
 
 ### Step 5: Commit passing tests
 
@@ -71,9 +67,17 @@ git add tests/
 git commit -m "test: add tests for <feature> acceptance scenarios"
 ```
 
-### Step 6: Update state
+## How the loop works
 
-Update `workflow-state.json`: set `currentPhase: "review"`.
+The product-loop extension governs this phase automatically:
+
+1. You enter the test phase (currentPhase: "test")
+2. Product-loop sends you the test prompt
+3. You write tests, run them, fix failures
+4. Product-loop detects progress (or stuck), sends appropriate follow-up
+5. When tests pass: you mark test complete, product-loop transitions to review
+
+**You don't need to type any commands.** Just write tests, run them, fix, and update progress.
 
 ## Test quality rules
 
@@ -90,5 +94,7 @@ Update `workflow-state.json`: set `currentPhase: "review"`.
 
 - Do NOT skip writing tests. Every plan includes a test task — this skill executes it.
 - Do NOT use external test frameworks (Jest, Mocha, Vitest). Node.js `assert` is sufficient.
-- If a test keeps failing after 3 attempts to fix: the problem might be in the build, not the test. Flag it for the code loop to handle.
+- If a test keeps failing after 3 attempts to fix: the problem might be in the build, not the test. Report stuck and the product-loop will escalate.
 - The test skill does NOT review code quality. That's the `review` skill's job.
+- Do NOT use the `interview` tool. This skill has no operator interaction.
+- Do NOT use the `ask` tool. This phase is fully autonomous (unless escalating).

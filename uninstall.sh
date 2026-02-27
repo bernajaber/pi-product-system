@@ -37,6 +37,7 @@ done
 # Extensions
 remove_link "$PI_DIR/extensions/product-setup" "extensions/product-setup"
 remove_link "$PI_DIR/extensions/ask-tool.ts" "extensions/ask-tool.ts"
+remove_link "$PI_DIR/extensions/product-loop.ts" "extensions/product-loop.ts"
 
 # Agents
 for agent in reviewer.md scout.md spec-checker.md; do
