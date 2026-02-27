@@ -1,5 +1,30 @@
 # Changelog
 
+## v2.3.0 — 2026-02-27
+
+### Fixed
+- **Brownfield support**: agent was ignoring the pipeline and coding directly when adding a new feature to an existing project
+  - Root cause: nothing enforced the workflow for `idle`/`init` phases — AGENTS.md alone was insufficient
+  - Fix: `product-loop` sends a guided nudge on `session_start` with `triggerTurn=false` so it becomes context alongside the operator's first message
+  - Three iterations to get right: `agent_end` (too late), `session_start + triggerTurn=true` (stole the turn), `session_start + triggerTurn=false` (correct)
+- **Validate skill**: removed `file://` recommendation — ES modules fail with CORS on `file://` protocol
+  - Both test features (propostas + dashboard) hit this issue; agent wasted time self-recovering
+  - Now always requires HTTP server: `npx serve` as default, `python3 -m http.server` as fallback
+- **Build skill**: removed `file://` verification reference, deferred visual verification to validate phase
+
+### Added
+- `GUIDED_PHASES` constant in product-loop: `['idle', 'init']` — phases that need a one-time workflow nudge
+- `guidedNudgeSent` flag in loop state to prevent repeated nudges
+- 4 new unit tests for guided-phase behavior (24 total for product-loop, 39 total across all extensions)
+
+### Tested
+- **Brownfield test**: added dashboard feature to existing proposal-generator app
+  - Agent correctly read all existing code, created new specs alongside existing ones
+  - Discovery asked targeted integration questions ("status field exists?", "separate page or same screen?")
+  - 5 commits on `feature/proposal-dashboard` branch (878 lines, SVG chart, responsive CSS)
+  - Review found P2 (dead CSS class) — no P0/P1
+  - Validate got stuck (server startup issue in sandbox) but pipeline was 90% complete
+
 ## v2.2.0 — 2026-02-27
 
 ### Added

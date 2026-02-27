@@ -105,13 +105,13 @@ Removes all symlinks. Pi works normally without the product system.
 
 ## Testing
 
-### Unit tests (35 tests, ~2 seconds)
+### Unit tests (39 tests, ~2 seconds)
 
 Tests the logic of all 3 extensions with mocks — no pi session needed.
 
 ```bash
 cd ~/pi-product-system-repo
-node --experimental-strip-types test/test-product-loop.ts   # 20 tests
+node --experimental-strip-types test/test-product-loop.ts   # 24 tests
 node --experimental-strip-types test/test-product-setup.ts  # 7 tests
 node --experimental-strip-types test/test-ask-tool.ts       # 8 tests
 ```
