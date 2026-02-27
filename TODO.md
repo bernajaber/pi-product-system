@@ -90,19 +90,19 @@
 - [ ] Evaluate: notify extension (desktop notification on gate reached)
 
 ### Phase 12: Specify Quality
-- [ ] **product-specify: identity-aware clarification** — for personal products (blog, portfolio, profile),
-      the skill specifies a design before knowing who the person is. The agent researched stephango.com
-      correctly but wrote generic AI posts and a placeholder bio because it never asked: "Quem é você?
-      O que você escreve? Qual é o seu tom?". Fix: add a product-type detection step at the start of
-      specify. If the product is personal (blog, site pessoal, portfolio, cv online), run a
-      clarification round focused on IDENTITY before researching design references:
-      - Who is the operator (name, short bio, background)?
-      - What topics/themes does the content cover?
-      - Does the operator have existing writing to use as voice reference?
-      - Should sample content reflect real ideas or be generic placeholders?
-      - What's the domain or intended URL?
-      This is different from the current "ask if description is ambiguous" rule — it's proactive for
-      identity-heavy products even when the description seems clear.
+- [ ] **product-specify: clarification is being skipped entirely** — observed in bernardo-blog pilot:
+      the operator gave a simple prompt and the agent went straight to spec+build without asking a
+      single question. The current skill says "if the description is ambiguous, ask the operator" —
+      but the agent interpreted a short prompt as sufficient and skipped clarification completely.
+      Result: incomplete product (missing pages) and no context about what the operator actually wanted.
+      Fix: make clarification MANDATORY for any prompt under ~50 words or that lacks explicit scope.
+      The skill should always surface at least 3-5 questions before writing the spec when the
+      description is a single sentence or paragraph. A short prompt is a signal to ask more, not
+      a green light to assume everything.
+- [ ] **product-specify: incomplete delivery not caught** — the blog was built with pages missing.
+      The self-review and product-validate phases did not catch that the spec's acceptance scenarios
+      were only partially met. Fix: spec-checker agent should be invoked before Gate 3 to verify
+      every acceptance scenario is covered by the build.
 
 ### Future
 - [ ] Convert to proper pi package (`pi install git:github.com/bernajaber/pi-product-system`)
