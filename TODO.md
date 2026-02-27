@@ -109,6 +109,33 @@
       - build-loop: make self-review non-optional (not just "if P0/P1 found")
       - product-validate: always run spec-checker before presenting Gate 3
 
+### Phase 13: Browser Tool Audit
+- [ ] **⚠️ INVESTIGATE: 3 browser skills conflicting** — three separate browser automation skills
+      are loaded simultaneously, which likely confuses the agent about which one to use:
+
+      | Skill | Source | How it works | Status |
+      |-------|--------|--------------|--------|
+      | `surf` | `surf-cli` npm global | Controls Chrome via CDP extension | Our skills use this |
+      | `web-browser` | `mitsupi` (pi package) | Uses local `./scripts/` + Chrome on port 9222 | Broken: `./scripts/` don't exist in project folders |
+      | `agent-browser` | `agent-browser` npm global | Playwright-based, headless | Not referenced anywhere |
+
+      **Risks:**
+      - Agent might pick `web-browser` or `agent-browser` instead of `surf` during validation
+      - `web-browser` (mitsupi) will always fail: requires `./scripts/nav.js` etc. which
+        don't exist outside Mario's own repo. License literally says "Stolen from Mario."
+      - `agent-browser` uses completely different command syntax (Playwright) vs surf (CDP)
+      - Our build-loop/product-validate skills hardcode `surf` commands — if agent uses
+        another skill, output is incompatible
+
+      **Investigation steps:**
+      1. Confirm `web-browser` (mitsupi) fails in a real project (no `./scripts/` dir)
+      2. Decide: keep `agent-browser` installed or remove it? (it's not in pi packages,
+         just a global npm — may have been installed independently)
+      3. Explicitly tell the agent in build-loop/product-validate: "use the `surf` skill,
+         not `web-browser` or `agent-browser`"
+      4. Consider: is `agent-browser` (Playwright, no Chrome extension needed) actually
+         more reliable than `surf` (requires Chrome + extension setup)?
+
 ### Future
 - [ ] Convert to proper pi package (`pi install git:github.com/bernajaber/pi-product-system`)
 - [ ] Per-project constitution overrides
