@@ -1,4 +1,7 @@
-# Bernardo's Product System — Especificação Técnica Completa
+> ⚠️ **ARCHIVED — V1 spec. Superseded by `docs/ARCHITECTURE-V2.md`. Do NOT use for implementation.**
+> This file is preserved for reference only. All V2 design decisions are in ARCHITECTURE-V2.md.
+
+# Bernardo's Product System — Especificação Técnica Completa (V1 — ARCHIVED)
 ## Motor: Pi Coding Agent + Ecossistema nicobailon + mitsuhiko
 
 > **Para quem é este documento:** O agente que vai implementar o sistema, e qualquer desenvolvedor que precise entender como as peças se conectam. Não é para o operador (Bernardo) ler — ele tem o `PARA-BERNARDO.md`.
