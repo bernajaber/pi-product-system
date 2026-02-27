@@ -1,6 +1,22 @@
 # Changelog
 
-## v2.1.0 — 2026-02-26
+## v2.1.1 — 2026-02-27
+
+### Fixed
+- Plan skill marker mismatch: looked for wrong HTML comment in REVIEW_GUIDELINES.md (P0 — tech standards were never injected)
+- ARCHITECTURE-V2.md §4/§5: removed V1 commands (`/loop self`, `/loop tests`, `/review uncommitted`) — now references `product-loop`
+- Analyze skill: removed invalid `currentPhase: "gate2"` (not in valid phases — broke session restart)
+- Product-loop: review cycle off-by-one — `>=` gave 2 reviews instead of 3 before force-proceed (now `>`)
+- Product-loop: review cycle display showed cycle N+1 instead of cycle N (widget was inconsistent too)
+- Build skill: removed "Git safety" section referencing non-existent `.pi/intercepted-commands`
+- Discovery skill: now sets `currentPhase: "discovery"` at start (was stuck at "init" on session restart)
+- CHANGELOG: all version dates corrected to 2026-02-27
+
+### Added
+- Discovery skill: guidance on choosing feature ID (kebab-case, used across all `.pi/specs/<id>/` paths)
+- Validate skill: explicit workflow-state.json update instructions for code quality loop (codeLoop fields, scout flow, phase transition)
+
+## v2.1.0 — 2026-02-27
 
 ### Added
 - `product-loop.ts` extension — autonomous workflow governor for build/test/review phases

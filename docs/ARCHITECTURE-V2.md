@@ -54,7 +54,7 @@ Antes de tudo, o agente deve ler `~/.pi/agent/product-constitution.md`. Os princ
 | `plan` | `spec.md` | `plan.md` — tasks atômicas + stack + estrutura | `auto-plan` |
 | `analyze` | brief + spec + plan + constitutions | `critique.md` + resumo para Gate 2 | nova skill |
 | `build` | `plan.md` | código commitado — uma task, um commit | `build-loop` Phase 1 |
-| `test` | código commitado | testes passando — `/loop tests` | última task do `build-loop` |
+| `test` | código commitado | testes passando | última task do `build-loop` |
 | `review` | código commitado | código limpo — sem P0/P1 | `build-loop` Phase 2 |
 | `validate` | código limpo + spec | produto verificado + checklist de evidências | `product-validate` |
 | `publish` | aprovação Gate 3 | release publicado | `auto-publish` |
@@ -145,17 +145,19 @@ OPERADOR descreve o que quer
          │
          ▼
     build ──────────────────────────────── código commitado
-    (implementa tasks do plan, /loop self,
+    (implementa tasks do plan,
+     product-loop governs,
      uma task = um commit)
          │
          ▼
     test ───────────────────────────────── testes passando
-    (/loop tests — condição objetiva: testes verdes)
+    (product-loop governs — condição
+     objetiva: testes verdes)
          │
          ▼
     review ─────────────────────────────── código limpo
-    (/review uncommitted, corrige P0/P1,
-     max 3 ciclos)
+    (product-loop sends rubric,
+     corrige P0/P1, max 3 ciclos)
          │
          ▼
     validate ───────────────────────────── produto verificado

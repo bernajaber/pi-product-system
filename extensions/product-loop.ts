@@ -231,8 +231,8 @@ function reviewPhaseFollowUp(progress: Progress | undefined, loopState: LoopStat
 		].join("\n");
 	}
 
-	// Max cycles reached — force proceed
-	if (loopState.reviewCycles >= MAX_REVIEW_CYCLES) {
+	// Max cycles reached — force proceed (> not >= because increment happens before check)
+	if (loopState.reviewCycles > MAX_REVIEW_CYCLES) {
 		return [
 			`Review has run ${MAX_REVIEW_CYCLES} cycles. Proceeding to validate — it will catch remaining issues through browser testing.`,
 			"Update progress: { task: 1, of: 1, status: \"ok\" } to mark review as complete.",
@@ -260,7 +260,7 @@ function reviewPhaseFollowUp(progress: Progress | undefined, loopState: LoopStat
 	// Drive — run the review. Send rubric + project guidelines.
 	const parts: string[] = [];
 
-	parts.push(`Review cycle ${loopState.reviewCycles + 1} of ${MAX_REVIEW_CYCLES}. Review all code changes on this branch. Run \`git diff main\` (or the base branch) to see the full diff.`);
+	parts.push(`Review cycle ${loopState.reviewCycles} of ${MAX_REVIEW_CYCLES}. Review all code changes on this branch. Run \`git diff main\` (or the base branch) to see the full diff.`);
 
 	// Append project-specific guidelines (single source of truth for per-project rules)
 	const guidelines = readReviewGuidelines(cwd);
@@ -305,7 +305,7 @@ function updateWidget(ctx: ExtensionContext, ws: WorkflowState | null, loopState
 	} else if (phase === "review") {
 		text = progress?.status === "stuck"
 			? `🔍 Review: fixing issues ⚠️ (cycle ${loopState.reviewCycles}/${MAX_REVIEW_CYCLES})`
-			: `🔍 Review: cycle ${loopState.reviewCycles + 1}/${MAX_REVIEW_CYCLES}`;
+			: `🔍 Review: cycle ${loopState.reviewCycles}/${MAX_REVIEW_CYCLES}`;
 	}
 
 	if (text) {

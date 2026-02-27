@@ -28,6 +28,17 @@ The depth is in the process, not in the document. A journalist interviews for 2 
 
 ## Process
 
+### Step 0: Initialize
+
+Update `workflow-state.json`: set `currentPhase: "discovery"`. This ensures the state accurately reflects that discovery is in progress (important for session restarts).
+
+Choose a **feature ID** — a short kebab-case identifier derived from the product name. Examples:
+- "Shopping List App" → `shopping-list`
+- "Commercial Proposal Generator" → `proposal-generator`
+- "Personal CRM" → `personal-crm`
+
+This ID is used everywhere: `.pi/specs/<id>/`, `feature/<id>` branch, `workflow-state.json` feature field. Pick it early so all artifacts use the same ID.
+
 ### Step 1: Listen
 
 The operator describes what they want. Don't interrupt. Absorb the full picture.

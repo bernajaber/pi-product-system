@@ -52,7 +52,7 @@ If a task touches more than 3 files: consider splitting it.
 
 ### Step 4: Update REVIEW_GUIDELINES.md
 
-Replace the `<!-- AUTO-PLAN UPDATES THIS SECTION after Gate 2 -->` comment in the project's `REVIEW_GUIDELINES.md` with project-specific technical standards:
+Replace the `<!-- Plan skill updates this section with project-specific rules -->` comment in the project's `REVIEW_GUIDELINES.md` with project-specific technical standards:
 
 - Stack: language, runtime, frameworks used (and what is NOT used)
 - Architecture: file organization, naming conventions

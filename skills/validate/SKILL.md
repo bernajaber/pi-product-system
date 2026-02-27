@@ -105,14 +105,20 @@ pkill -f "node server.js" 2>/dev/null || true
 
 **If ANY scenario FAILS:**
 - Do NOT present Gate 3
-- Record which scenario failed in `workflow-state.json` (`codeLoop.lastFailedScenario`)
-- Enter the code quality loop:
-  1. Use `scout` agent to diagnose root cause and map to plan task
-  2. `build` fixes ONLY the mapped task (surgical fix)
-  3. `test` runs ALL tests (may have regressions)
-  4. `review` runs on ALL code
-  5. `validate` runs ALL scenarios again
-  6. Max 3 cycles. If unresolved → escalate to operator
+- Update `workflow-state.json` for the code quality loop:
+  1. Increment `codeLoop.cycle` by 1
+  2. Set `codeLoop.lastFailedScenario` to the scenario description that failed
+  3. Check: if `codeLoop.cycle > codeLoop.maxCycles` → escalate to operator (see Escalation below). Stop here.
+  4. Launch the `scout` agent (via pi-subagents) to diagnose root cause and map to a plan task
+  5. Set `codeLoop.lastDiagnosis` to the scout's root cause description
+  6. Set `codeLoop.lastReentryTask` to the mapped task (or `null` if systemic)
+  7. Set `currentPhase: "build"` — this triggers the product-loop extension, which detects surgical fix mode from `codeLoop.lastFailedScenario` and sends targeted build instructions
+- The code quality loop then runs automatically:
+  - `build` fixes ONLY the mapped task (surgical fix)
+  - `test` runs ALL tests (may have regressions)
+  - `review` runs on ALL code
+  - `validate` runs ALL scenarios again (you'll re-enter this skill)
+  - Max 3 cycles total (tracked by `codeLoop.cycle`)
 
 ### Step 7: Present Gate 3 (in Portuguese)
 

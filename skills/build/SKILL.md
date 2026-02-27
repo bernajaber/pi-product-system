@@ -91,14 +91,6 @@ kill %1
 
 **Do NOT start long-running dev servers during build.** The bash tool cannot handle background processes reliably.
 
-## Git safety
-
-Always prefix git push with the intercepted-commands PATH:
-```bash
-PATH=".pi/intercepted-commands:$PATH" git push origin main
-```
-This blocks pushes to main unless Gate 3 is approved.
-
 ## Rules
 
 - Follow the plan's task order. Tasks are ordered so each produces a working (if incomplete) state.

@@ -102,8 +102,7 @@ Justification: [1 sentence]
 5. **Max 3 cycles.** If still issues after 3 → escalate to operator (see Escalation below)
 
 **If no issues (clean):**
-1. Update `workflow-state.json`: set `currentPhase: "gate2"`
-2. Proceed to Gate 2 presentation
+1. Proceed to Gate 2 presentation (keep `currentPhase: "analyze"` — it transitions to `"build"` on Gate 2 approval)
 
 ### Step 7: Present Gate 2
 
