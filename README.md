@@ -103,8 +103,60 @@ cd ~/pi-product-system-repo
 
 Removes all symlinks. Pi works normally without the product system.
 
+## Testing
+
+### Unit tests (35 tests, ~2 seconds)
+
+Tests the logic of all 3 extensions with mocks — no pi session needed.
+
+```bash
+cd ~/pi-product-system-repo
+node --experimental-strip-types test/test-product-loop.ts   # 20 tests
+node --experimental-strip-types test/test-product-setup.ts  # 7 tests
+node --experimental-strip-types test/test-ask-tool.ts       # 8 tests
+```
+
+Requires Node.js v22+ (for `--experimental-strip-types`).
+
+### Integration test (9 checks, ~4 minutes)
+
+Tests the full pipeline in a real pi session — proves the product-loop drives autonomous phases.
+
+**What it does:** Creates a pre-seeded "Hello World" project at build phase, launches pi via `interactive_shell` dispatch mode with `PI_AUTO_TEST=true`, and lets the product-loop drive the agent through build → test → review → validate → Gate 3 → publish. No manual interaction needed.
+
+**Step 1 — Create the fixture:**
+
+```bash
+cd ~/pi-product-system-repo
+bash test/integration/setup-hello-world.sh /tmp/test-product-loop
+```
+
+**Step 2 — Launch pi (from inside a pi session):**
+
+```
+interactive_shell({
+  command: 'PI_AUTO_TEST=true pi "Read .pi/AGENTS.md for the workflow. Read .pi/workflow-state.json for current state. You are in the build phase with Gate 2 approved. Start implementing according to the build skill."',
+  mode: "dispatch",
+  cwd: "/tmp/test-product-loop",
+  name: "integration-test",
+  handsFree: { autoExitOnQuiet: true, quietThreshold: 90000, gracePeriod: 45000 },
+  timeout: 480000
+})
+```
+
+**Step 3 — Verify (after the session completes):**
+
+```bash
+bash test/integration/verify-hello-world.sh /tmp/test-product-loop
+```
+
+Expected: `🎉 INTEGRATION TEST PASSED` — 9/9 checks, final phase "publish".
+
+See `test/integration/README.md` for full details.
+
 ## Documentation
 
 - **For the operator** (non-technical): `docs/PARA-BERNARDO.md`
 - **Architecture details**: `docs/ARCHITECTURE-V2.md`
 - **Implementation plan**: `TODO.md`
+- **Testing details**: `test/integration/README.md`

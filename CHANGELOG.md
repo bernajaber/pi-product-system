@@ -1,5 +1,16 @@
 # Changelog
 
+## v2.2.0 — 2026-02-27
+
+### Added
+- Integration test: automated end-to-end pipeline verification via `interactive_shell` dispatch mode
+  - `test/integration/setup-hello-world.sh` creates pre-seeded fixture at build phase
+  - `test/integration/verify-hello-world.sh` runs 9 assertions on outcomes
+  - Uses `PI_AUTO_TEST=true` to auto-approve gates — zero manual interaction
+  - First run: full pipeline (build → test → review → validate → Gate 3 → publish) in ~4 minutes
+  - Proves: product-loop wiring, sendMessage delivery, ask-tool auto-test, widget rendering, agent-browser screenshots
+- README: added Testing section with commands for unit + integration tests
+
 ## v2.1.1 — 2026-02-27
 
 ### Fixed
