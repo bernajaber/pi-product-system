@@ -330,12 +330,173 @@ O sistema vive neste repo e é instalado em `~/.pi/agent/` via symlinks (`instal
 
 ---
 
+## V3 — Evolução baseada em análise competitiva (2026-02-27)
+
+> Análise de 7 repositórios: DeerFlow (ByteDance), Trae Agent (ByteDance), AgentScope (Alibaba),
+> Vibe Kanban (Bloop), claude-code-security-review (Anthropic), git-ai, Claude-Flow.
+> 16 findings identificados. 6 aprovados pelo operador para implementação.
+>
+> **Regra:** execute na ordem. Phase 6 é fundação — tudo visual depende dele.
+
+### Phase 6 — Execution Trace (H1)
+
+> **Inspirado por:** Trae Agent (trajectory recorder), DeerFlow (thread state), Vibe Kanban (event service)
+>
+> **Problema:** O Pi não registra o que aconteceu durante o build. Quando uma sessão reinicia, o único contexto é workflow-state.json (números). Não há história. Não há como responder "o que o agente fez nas últimas 2 horas?".
+>
+> **Princípio:** Local and transparent — cada decisão rastreável a um arquivo que um humano pode ler.
+
+- [ ] **Definir schema do trace entry**
+  - Um JSON object por linha em `.pi/specs/<feature>/trace.jsonl` (append-only)
+  - Campos: `timestamp`, `phase`, `turn`, `action` (resumo curto), `tags` (array de strings), `progress` (snapshot de workflow-state progress), `duration_ms` (tempo desde último entry), `error` (se houver)
+  - Tags possíveis: `COMMIT`, `WRITE_FILE`, `TEST_RUN`, `TEST_PASS`, `TEST_FAIL`, `REVIEW_CYCLE`, `FIX`, `SCREENSHOT`, `GATE_APPROVED`, `GATE_REJECTED`, `ESCALATION`, `PHASE_CHANGE`
+  - Não incluir conteúdo completo da resposta do agente (seria enorme). Só o resumo.
+
+- [ ] **Adicionar trace recording a `product-loop.ts`**
+  - No handler `agent_end`: extrair resumo da ação + tags por pattern-matching
+    - Resposta contém "git commit" ou "committed" → tag `COMMIT`
+    - Resposta contém "created file" / "wrote" / "write_file" → tag `WRITE_FILE`
+    - Resposta contém "test" + "pass" → tag `TEST_PASS`
+    - Resposta contém "test" + "fail" → tag `TEST_FAIL`
+    - Resposta contém "P0" ou "P1" → tag `REVIEW_CYCLE`
+    - Resposta contém "screenshot" → tag `SCREENSHOT`
+    - etc.
+  - Resumo: primeiros 150 caracteres da resposta do agente, limpos (sem markdown pesado)
+  - Precisa do feature ID: ler `workflow-state.json` → `feature` field → path `.pi/specs/<feature>/trace.jsonl`
+  - `duration_ms`: calcular desde o último `agent_end` (guardar timestamp no loopState)
+  - **Arquivo modificado:** `extensions/product-loop.ts`
+
+- [ ] **Adicionar trace entries para gates no `ask-tool.ts`**
+  - Quando o operador responde um gate, gravar entry no trace: tag `GATE_APPROVED` ou `GATE_REJECTED`, com a opção escolhida
+  - Precisa do feature ID: ler workflow-state.json
+  - **Arquivo modificado:** `extensions/ask-tool.ts`
+
+- [ ] **Adicionar trace entry para mudança de fase**
+  - No product-loop, quando `ws.currentPhase !== loopState.phase`: gravar entry com tag `PHASE_CHANGE`
+  - **Arquivo modificado:** `extensions/product-loop.ts`
+
+- [ ] **Unit tests para trace recording**
+  - Testar: entry é escrita no arquivo correto, tags são extraídas corretamente, JSONL é válido, append não corrompe entradas anteriores
+  - **Arquivo:** `test/test-product-loop.ts` (adicionar seção de trace tests)
+
+---
+
+### Phase 7 — Verified Completion + Richer Observability (H3 + M6)
+
+> **Inspirado por:** Trae Agent (`task_done` tool com verificação obrigatória), Trae LakeView (tags + resumo)
+>
+> **Problema H3:** Nada impede o agente de avançar de fase sem verificar que o trabalho está feito. Hoje é enforced por prompt, não por mecanismo.
+>
+> **Problema M6:** O widget do TUI mostra "build · turn 4" mas não O QUE o agente está fazendo.
+>
+> **Princípio:** Zero visible bugs — se o agente pode pular verificação, eventualmente vai pular.
+
+- [ ] **Adicionar verificação de transição de fase no `product-loop.ts`**
+  - Quando detecta mudança de fase (`ws.currentPhase !== loopState.phase`):
+    - `build → test`: verificar que pelo menos 1 commit existe na branch (executar `git log --oneline -1` via `execSync`)
+    - `test → review`: verificar que existe arquivo de teste no projeto (glob rápido)
+    - `review → validate`: nenhuma verificação adicional (review já é self-check)
+  - Se verificação falha: NÃO enviar follow-up da nova fase. Em vez disso, enviar: "Você avançou para {fase} mas a verificação falhou: {motivo}. Volte para {fase anterior} e complete o trabalho."
+  - **Arquivo modificado:** `extensions/product-loop.ts`
+
+- [ ] **Melhorar TUI widget com info do trace**
+  - Atualmente: `🔨 Build: 3/8 ✓ (turn 12)`
+  - Proposta: `🔨 Build: 3/8 · COMMIT auth-module (turn 12)`
+  - O widget mostra a última tag + resumo curto do trace (última entrada do trace.jsonl)
+  - **Arquivo modificado:** `extensions/product-loop.ts`
+
+- [ ] **Unit tests para verificação de transição**
+  - Testar: build→test sem commit falha, build→test com commit permite, teste é skip-able se não tem arquivo de teste
+  - **Arquivo:** `test/test-product-loop.ts`
+
+---
+
+### Phase 8 — Discovery Depth Enforcement (M5)
+
+> **Inspirado por:** DeerFlow (ClarificationMiddleware — agente não pode agir antes de clarificar)
+>
+> **Problema:** Discovery é a fundação — se falha, tudo downstream quebra. Hoje a profundidade é enforced por prompt ("ZERO suposições"). Mas o agente pode ignorar o prompt e escrever o brief com suposições.
+>
+> **Princípio:** Do one thing well — discovery produz o brief. Se o brief tem suposições, discovery não fez o trabalho.
+
+- [ ] **Adicionar "Assumption Audit" step ao `discovery/SKILL.md`**
+  - Antes de escrever o brief, o agente DEVE listar explicitamente:
+    - "Minhas suposições restantes: [lista]"
+    - Se a lista tem 1+ item → NÃO pode escrever o brief. Deve fazer as perguntas.
+    - Se a lista é vazia → pode escrever
+  - Esse step é entre "entrevista" e "escrita do brief" — um checkpoint interno da skill
+  - **Arquivo modificado:** `skills/discovery/SKILL.md`
+
+- [ ] **Adicionar check no `product-loop.ts` para discovery**
+  - Na fase `init` → `discovery`: quando o agente produz brief.md, o product-loop lê o arquivo
+  - Se brief.md contém palavras como "assumed", "TBD", "to be decided", "assumption" → enviar follow-up: "O brief contém suposições. Volte ao discovery e pergunte ao operador."
+  - Heurística simples, não é LLM — pattern matching em keywords
+  - **Arquivo modificado:** `extensions/product-loop.ts`
+
+---
+
+### Phase 9 — Workspace Safety (H2)
+
+> **Inspirado por:** Vibe Kanban (git worktree isolation por task)
+>
+> **Problema:** Se o Pi trava no meio do build, a pasta do projeto fica num estado "meio-feito". Não tem como voltar atrás facilmente.
+>
+> **Decisão:** Worktrees completas são para multi-feature (Future). Por agora, implementar **safety checkpoint**: tag do estado limpo antes do build, com instrução de recovery.
+
+- [ ] **Adicionar safety checkpoint na `build/SKILL.md`**
+  - No Step 1 (antes de implementar qualquer task): criar tag `pre-build/<feature>`
+  - `git tag pre-build/<feature> HEAD`
+  - Se algo der errado e precisa reset: `git reset --hard pre-build/<feature>`
+  - Documentar no skill: "Se o build falhar catastroficamente, o operador pode executar `git reset --hard pre-build/<feature>` para voltar ao estado limpo."
+  - **Arquivo modificado:** `skills/build/SKILL.md`
+
+- [ ] **Adicionar instrução de recovery ao `publish/SKILL.md`**
+  - No Step 8 (reset workflow): deletar a tag `pre-build/<feature>` — já não é necessária
+  - `git tag -d pre-build/<feature>` (ignore error se tag não existe)
+  - **Arquivo modificado:** `skills/publish/SKILL.md`
+
+---
+
+### Phase 10 — Dashboard (requer design discussion)
+
+> **Inspirado por:** Vibe Kanban (conceito de kanban visual — NÃO o design, que viola toda a nossa filosofia)
+>
+> **Problema:** O operador não tem visão de "painel de controle" do produto sendo construído. Tem que perguntar ao agente ou ler git log.
+>
+> **Princípio:** Radical simplicity — o operador decide em 5 segundos. Local and transparent — abre um HTML no browser.
+>
+> **Dependência HARD de Phase 6 (trace) + Phase 7 (tags).** O dashboard lê os dados que eles produzem.
+>
+> ⚠️ **O design deste dashboard será discutido intensamente com o operador. O Vibe Kanban é referência de conceito, NÃO de visual.** O design deve ser pixel-perfect, mínimo, com hierarquia visual clara — o oposto do Vibe Kanban.
+
+- [ ] **Design session com operador**
+  - Definir: que informação aparece? qual hierarquia? qual estética?
+  - Mockup antes de implementar — não fazer e depois iterar
+  - Input: screenshot do Vibe Kanban como anti-referência + dados disponíveis (trace, plan, workflow-state, screenshots)
+  - Output: mockup aprovado (pode ser sketch, pode ser HTML estático manual)
+
+- [ ] **Implementar geração de dashboard**
+  - Gerar `.pi/specs/<feature>/dashboard.html` — arquivo HTML estático, self-contained (CSS inline, dados inline)
+  - Lê: `trace.jsonl` (timeline + tags), `plan.md` (tasks), `workflow-state.json` (phase + progress), screenshots de validate
+  - Gerado pelo `product-loop.ts` em cada `PHASE_CHANGE` (não a cada turn — seria wasteful)
+  - Operador abre no browser quando quiser — zero servidor, zero infra
+  - **Arquivo modificado:** `extensions/product-loop.ts` (novo: função `generateDashboard`)
+
+- [ ] **Adicionar link ao dashboard nos gates**
+  - Quando Gate 2 ou Gate 3 é apresentado, mencionar: "Veja o progresso completo em .pi/specs/<id>/dashboard.html"
+  - **Arquivos modificados:** `skills/analyze/SKILL.md`, `skills/validate/SKILL.md`
+
+---
+
 ## Future
 
 > Não implementar agora. Registrado para não perder.
+> Items marcados com ← são habilitados pelas phases V3.
 
 - [ ] Converter para pi package (`pi install git:github.com/bernajaber/pi-product-system`)
 - [ ] Per-project constitution overrides
-- [ ] Multi-feature workflow (features paralelas com dependências)
-- [ ] Cost tracking por projeto
+- [ ] Multi-feature workflow (features paralelas com dependências) ← habilitado por Phase 9 (worktree) quando evoluir para worktrees completas
+- [ ] Cost tracking por projeto ← habilitado por Phase 6 (trace) quando pi expor token counts na extension API
 - [ ] Extensões de produtividade: git-checkpoint, protected-paths, session-name, status-line, notify
+- [ ] Long-term memory across sessions (inspirado por DeerFlow — TF-IDF similarity para injetar preferências do operador)
+- [ ] Two-stage review pre-filtering (inspirado por claude-code-security-review — regex hard-exclusion antes do LLM)
