@@ -82,6 +82,50 @@
 - [ ] Edge case: what happens if agent ignores AGENTS.md? Document recovery steps
 - [ ] Edge case: what happens mid-build if context compacts? Verify workflow-state survives
 
+### Phase 15: Skills Architecture Refactor
+
+> Outcome of deep philosophy analysis (2026-02-26).
+> Current skills violate "do one thing well" — they mix responsibilities and some have no
+> clear output of their own. The refactor aligns every skill with: one input, one output,
+> one responsibility.
+
+**Final skill map:**
+
+| Skill | Input | Output | Replaces |
+|-------|-------|--------|----------|
+| `discovery` | operator description | `brief.md` — rich product description from deep interview + research | `product-clarify` + interview/research steps of `product-specify` |
+| `specify` | `brief.md` | `spec.md` — structured spec with acceptance scenarios | `product-specify` (spec-writing only) |
+| `plan` | `spec.md` | `plan.md` — atomic tasks + stack + file structure | `auto-plan` |
+| `build` | `plan.md` | committed code — one commit per task, /loop self | `build-loop` Phase 1 |
+| `test` | committed code | passing tests — /loop tests (true Ralph Loop) | last task of `build-loop` |
+| `review` | committed code | clean code — no P0/P1 findings | `build-loop` Phase 2 |
+| `validate` | clean code + spec | Gate 3 approval — browser verification + operator checklist | `product-validate` |
+| `publish` | Gate 3 approval | published release — PR + merge + tag + changelog + reset | `auto-publish` |
+
+**Skills removed:**
+- `product-clarify` → absorbed into `discovery` (clarify was just a step, not a skill)
+
+**Why discovery before specify:**
+Today `specify` does: interview operator + research references + write spec.
+"Understanding" and "formalizing" are different cognitive acts — when both live in the
+same skill, the spec suffers because the agent is still understanding while already writing.
+`discovery` produces a rich `brief.md` that `specify` takes as pure input, allowing it
+to focus 100% on writing the best possible spec.
+
+**Implementation steps:**
+- [ ] Create `skills/discovery/SKILL.md`
+- [ ] Rewrite `skills/specify/SKILL.md` — input: brief.md, output: spec.md only
+- [ ] Delete `skills/product-clarify/` — absorbed into discovery
+- [ ] Create `skills/test/SKILL.md` — extracted from build-loop, uses /loop tests
+- [ ] Create `skills/review/SKILL.md` — extracted from build-loop Phase 2
+- [ ] Rewrite `skills/build/SKILL.md` (from build-loop) — features only, /loop self
+- [ ] Rename `skills/auto-plan/` → `skills/plan/`
+- [ ] Rename `skills/product-validate/` → `skills/validate/`
+- [ ] Rename `skills/auto-publish/` → `skills/publish/`
+- [ ] Update `extensions/product-setup/index.ts` — new skill names in AGENTS.md template
+- [ ] Update `install.sh` — new skill names and paths
+- [ ] Update `README.md`
+
 ### Phase 14: Pilot Fixes (observed in personal-crm pilot — 2026-02-26)
 
 - [ ] **FIX: /setup should create GitHub remote** — today the project is initialized locally
