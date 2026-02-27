@@ -1,5 +1,28 @@
 # Changelog
 
+## v2.3.1 — 2026-02-27
+
+### Fixed
+- **P0: `/setup` idempotency** — running `/setup` twice destroyed existing state (brief.md, spec.md, workflow-state.json). Now refuses to run if `workflow-state.json` exists.
+- **P1: Removed `reviewer.md` agent** — V1 artifact that was installed but never invoked. V2 review is self-review by the main agent (product-loop sends rubric, agent reviews via `git diff`). Deleted from repo, install.sh, uninstall.sh, all references.
+- **P1: REVIEW_GUIDELINES path** — AGENTS.md template pointed to system copy (`~/.pi/agent/REVIEW_GUIDELINES.md`). Fixed to project copy (`REVIEW_GUIDELINES.md`) which the plan skill customizes with tech standards.
+- **P1: Removed `progress.md` reference** — publish skill referenced a file no component creates. Removed.
+- **P2: Feature ID persistence** — discovery now explicitly persists feature ID to `workflow-state.json` in Step 0 (was only in conversation context — unsafe across compaction).
+- **P2: Feature field type** — ARCHITECTURE-V2.md said object, practice used string. Aligned to string everywhere. Plan skill now verifies instead of setting.
+- **P2: Removed `"idle"` from GUIDED_PHASES** — no component produces this phase. Only `"init"` remains.
+- **P2: Removed `feature-list.json`** — write-only artifact (specify wrote it, nothing read it). Removed from specify, publish, architecture, and test fixture.
+- **P2: `session_switch` resume** — now sends autonomous follow-up on session switch, matching `session_start` behavior.
+- **P2: `guidedNudgeSent` preserved on phase change** — was missing from reset object, causing potential re-nudge.
+- **P2: Non-Node testing guidance** — test skill now includes Python, Go, and Shell examples. Plan skill no longer hardcodes `.test.js`.
+- **P3: Sub-agent invocation syntax** — analyze and validate skills now show concrete `subagent()` call examples.
+- **P3: TODO.md** — marked completed Phase 5 items as done.
+- **P3: Test count fix** — `test-ask-tool.ts` no longer inflates pass count (was 8/7, now 6/6).
+- **P3: Integration test fixture** — added sync comment, updated AGENTS.md reference, removed `feature-list.json`.
+
+### Changed
+- Install/uninstall: 2 agents (scout, spec-checker) instead of 3. Uninstall cleans up V1 `reviewer.md` if present.
+- Tests: 37 total (23 product-loop, 8 product-setup, 6 ask-tool). New test: `/setup` idempotency guard.
+
 ## v2.3.0 — 2026-02-27
 
 ### Fixed
