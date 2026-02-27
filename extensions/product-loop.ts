@@ -30,6 +30,9 @@ import * as path from "node:path";
 // Phases where the extension sends follow-ups automatically
 const AUTONOMOUS_PHASES = ["build", "test", "review"];
 
+// Phases where the agent needs a one-time nudge to follow the workflow
+const GUIDED_PHASES = ["idle", "init"];
+
 const MAX_REVIEW_CYCLES = 3;
 
 type Progress = {
@@ -55,6 +58,7 @@ type LoopStateData = {
 	stuckCount: number;
 	turnCount: number;
 	reviewCycles: number;
+	guidedNudgeSent: boolean;
 };
 
 const LOOP_STATE_ENTRY = "product-loop-state";
@@ -65,6 +69,7 @@ const EMPTY_STATE: LoopStateData = {
 	stuckCount: 0,
 	turnCount: 0,
 	reviewCycles: 0,
+	guidedNudgeSent: false,
 };
 
 // ---------------------------------------------------------------------------
@@ -366,6 +371,20 @@ export default function productLoop(pi: ExtensionAPI): void {
 				ctx.ui.notify("Loop parado", "info");
 				return;
 			}
+		}
+
+		// Guided phases (idle/init): send a one-time nudge to follow the workflow.
+		// Without this, the agent may skip discovery and code directly.
+		if (GUIDED_PHASES.includes(ws.currentPhase) && !loopState.guidedNudgeSent) {
+			loopState.guidedNudgeSent = true;
+			persistState();
+			sendFollowUp(
+				"⚠️ This project uses the Product Creation System. You MUST follow the workflow in .pi/AGENTS.md.\n" +
+				"Do NOT write any code until Gates 1 and 2 are approved.\n\n" +
+				"Start now: read ~/.pi/agent/skills/discovery/SKILL.md and begin the discovery process.\n" +
+				"The operator's message above is your input — interview them to understand what they want to build."
+			);
+			return;
 		}
 
 		// Not an autonomous phase? Clear loop and return.

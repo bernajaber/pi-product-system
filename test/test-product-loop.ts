@@ -430,6 +430,65 @@ async function runTests() {
 		cleanupDir(dir);
 	});
 
+	// ─── GUIDED PHASES (idle/init) ──────────────────────────────────────────
+
+	console.log("\nGuided phases (idle/init):");
+
+	await test("idle phase → one-time nudge to start discovery", async () => {
+		const dir = createTempDir();
+		const { pi, handlers, messages, entries } = createMockPi();
+		productLoop(pi as any);
+		writeWorkflowState(dir, { currentPhase: "idle" });
+		const ctx = createMockCtx(dir, entries);
+		await fireAgentEnd(handlers, ctx);
+		assert.strictEqual(messages.length, 1, "should send exactly one nudge");
+		assertMessageContains(messages, "Product Creation System", "mentions system");
+		assertMessageContains(messages, "discovery", "directs to discovery");
+		assertMessageContains(messages, "Do NOT write any code", "warns against coding");
+		cleanupDir(dir);
+	});
+
+	await test("init phase → one-time nudge to start discovery", async () => {
+		const dir = createTempDir();
+		const { pi, handlers, messages, entries } = createMockPi();
+		productLoop(pi as any);
+		writeWorkflowState(dir, { currentPhase: "init" });
+		const ctx = createMockCtx(dir, entries);
+		await fireAgentEnd(handlers, ctx);
+		assert.strictEqual(messages.length, 1, "should send exactly one nudge");
+		assertMessageContains(messages, "discovery", "directs to discovery");
+		cleanupDir(dir);
+	});
+
+	await test("idle phase → nudge sent only once (not repeated)", async () => {
+		const dir = createTempDir();
+		const { pi, handlers, messages, entries } = createMockPi();
+		productLoop(pi as any);
+		writeWorkflowState(dir, { currentPhase: "idle" });
+		const ctx = createMockCtx(dir, entries);
+
+		// First turn: should send nudge
+		await fireAgentEnd(handlers, ctx);
+		assert.strictEqual(messages.length, 1, "first turn sends nudge");
+
+		// Second turn: should NOT send nudge again
+		messages.length = 0;
+		await fireAgentEnd(handlers, ctx);
+		assert.strictEqual(messages.length, 0, "second turn should not repeat nudge");
+		cleanupDir(dir);
+	});
+
+	await test("discovery phase (not idle/init) → no nudge", async () => {
+		const dir = createTempDir();
+		const { pi, handlers, messages, entries } = createMockPi();
+		productLoop(pi as any);
+		writeWorkflowState(dir, { currentPhase: "discovery" });
+		const ctx = createMockCtx(dir, entries);
+		await fireAgentEnd(handlers, ctx);
+		assert.strictEqual(messages.length, 0, "discovery phase should not get nudge");
+		cleanupDir(dir);
+	});
+
 	// ─── SENDMESSAGE CONTRACT ───────────────────────────────────────────────
 
 	console.log("\nsendMessage contract:");
