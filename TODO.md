@@ -133,14 +133,18 @@
       reading the SKILL.md: surf=545 lines, agent-browser=252 lines, web-browser=91 lines.
       Skills are loaded on-demand (only when the agent reads the file), not at startup.
 
-      **Investigation steps:**
-      1. Confirm `web-browser` (mitsupi) fails in a real project (no `./scripts/` dir)
-      2. Decide: keep `agent-browser` installed or remove it? (it's not in pi packages,
-         just a global npm — may have been installed independently)
-      3. Explicitly tell the agent in build-loop/product-validate: "use the `surf` skill,
-         not `web-browser` or `agent-browser`"
-      4. Consider: is `agent-browser` (Playwright, no Chrome extension needed) actually
-         more reliable than `surf` (requires Chrome + extension setup)?
+      **Recommendation: migrate to `agent-browser`.** Confirmed: surf fails when Chrome
+      is not open (`Connection refused. Native host not running`). agent-browser (Playwright)
+      is self-contained — no Chrome extension required, starts its own Chromium.
+
+      **Action items:**
+      1. Update `build-loop/SKILL.md`: replace `surf window.new / surf --window-id` commands
+         with `agent-browser open / agent-browser screenshot / agent-browser snapshot -i`
+      2. Update `product-validate/SKILL.md`: same replacement
+      3. Remove `web-browser` skill confusion: add note to AGENTS.md template in /setup
+         that `web-browser` (mitsupi) is not usable (requires Mario's local ./scripts/)
+      4. `surf` can stay installed for manual use (AI queries, real Chrome session) but
+         should not be the tool for automated product validation
 
 ### Future
 - [ ] Convert to proper pi package (`pi install git:github.com/bernajaber/pi-product-system`)
