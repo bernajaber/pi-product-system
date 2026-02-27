@@ -89,20 +89,25 @@
 - [ ] Evaluate: status-line extension (show current workflow phase)
 - [ ] Evaluate: notify extension (desktop notification on gate reached)
 
-### Phase 12: Specify Quality
-- [ ] **product-specify: clarification is being skipped entirely** — observed in bernardo-blog pilot:
-      the operator gave a simple prompt and the agent went straight to spec+build without asking a
-      single question. The current skill says "if the description is ambiguous, ask the operator" —
-      but the agent interpreted a short prompt as sufficient and skipped clarification completely.
-      Result: incomplete product (missing pages) and no context about what the operator actually wanted.
-      Fix: make clarification MANDATORY for any prompt under ~50 words or that lacks explicit scope.
-      The skill should always surface at least 3-5 questions before writing the spec when the
-      description is a single sentence or paragraph. A short prompt is a signal to ask more, not
-      a green light to assume everything.
-- [ ] **product-specify: incomplete delivery not caught** — the blog was built with pages missing.
-      The self-review and product-validate phases did not catch that the spec's acceptance scenarios
-      were only partially met. Fix: spec-checker agent should be invoked before Gate 3 to verify
-      every acceptance scenario is covered by the build.
+### Phase 12: End-to-End Process Audit (post-consolidation)
+- [ ] **⚠️ AUDIT: full process broke during bernardo-blog pilot** — zero clarification questions
+      asked, self-review skipped, product delivered incomplete (missing pages). The entire workflow
+      ran without following the gates protocol.
+      
+      **Likely cause:** bernardo-blog was built BEFORE Phase 9 consolidation (skills/extensions
+      were not yet in their final location, AGENTS.md template was different). This may be a
+      false positive — the current system may work correctly.
+      
+      **Verification needed (run after Phase 8 pilot with current system):**
+      - Does product-specify ask at least 3 questions before writing a spec from a short prompt?
+      - Does build-loop invoke self-review after completing tasks?
+      - Does product-validate invoke spec-checker to verify all acceptance scenarios are covered?
+      - Does the full flow Gate 1 → Gate 2 → build → review → Gate 3 run without skipping steps?
+      
+      If the audit finds the same failures on the current system, the fixes are:
+      - product-specify: treat short/vague prompts as mandatory clarification triggers
+      - build-loop: make self-review non-optional (not just "if P0/P1 found")
+      - product-validate: always run spec-checker before presenting Gate 3
 
 ### Future
 - [ ] Convert to proper pi package (`pi install git:github.com/bernajaber/pi-product-system`)
