@@ -336,7 +336,13 @@ O sistema vive neste repo e é instalado em `~/.pi/agent/` via symlinks (`instal
 > Vibe Kanban (Bloop), claude-code-security-review (Anthropic), git-ai, Claude-Flow.
 > 16 findings identificados. 6 aprovados pelo operador para implementação.
 >
-> **Regra:** execute na ordem. Phase 6 é fundação — tudo visual depende dele.
+> **Regra de arquitetura:** cada extension faz UMA coisa.
+> - `product-loop.ts` → governa fluxo (follow-ups, escalação, verificação de transição)
+> - `execution-trace.ts` → registra o que aconteceu (JSONL append-only)
+> - `dashboard.ts` → visualiza progresso (lê trace, gera HTML estático)
+> - `ask-tool.ts` → apresenta gates (já existe, recebe minor addition)
+>
+> **Regra de execução:** execute na ordem. Phase 6 é fundação — tudo visual depende dele.
 
 ### Phase 6 — Execution Trace (H1)
 
@@ -345,39 +351,52 @@ O sistema vive neste repo e é instalado em `~/.pi/agent/` via symlinks (`instal
 > **Problema:** O Pi não registra o que aconteceu durante o build. Quando uma sessão reinicia, o único contexto é workflow-state.json (números). Não há história. Não há como responder "o que o agente fez nas últimas 2 horas?".
 >
 > **Princípio:** Local and transparent — cada decisão rastreável a um arquivo que um humano pode ler.
+>
+> **Nova extension: `execution-trace.ts`** — NÃO vai no product-loop. Razão: registrar é uma responsabilidade diferente de governar. Ambas escutam `agent_end`, cada uma faz seu trabalho.
 
 - [ ] **Definir schema do trace entry**
   - Um JSON object por linha em `.pi/specs/<feature>/trace.jsonl` (append-only)
-  - Campos: `timestamp`, `phase`, `turn`, `action` (resumo curto), `tags` (array de strings), `progress` (snapshot de workflow-state progress), `duration_ms` (tempo desde último entry), `error` (se houver)
+  - Campos: `timestamp` (ISO 8601), `phase`, `turn` (incremental dentro da extension), `action` (resumo curto ≤150 chars), `tags` (array de strings), `progress` (snapshot `{ task, of, status }` do workflow-state), `duration_ms` (tempo desde último entry), `error` (string, se houver)
   - Tags possíveis: `COMMIT`, `WRITE_FILE`, `TEST_RUN`, `TEST_PASS`, `TEST_FAIL`, `REVIEW_CYCLE`, `FIX`, `SCREENSHOT`, `GATE_APPROVED`, `GATE_REJECTED`, `ESCALATION`, `PHASE_CHANGE`
   - Não incluir conteúdo completo da resposta do agente (seria enorme). Só o resumo.
+  - Documentar schema como tipo TypeScript no topo de `execution-trace.ts`
 
-- [ ] **Adicionar trace recording a `product-loop.ts`**
-  - No handler `agent_end`: extrair resumo da ação + tags por pattern-matching
-    - Resposta contém "git commit" ou "committed" → tag `COMMIT`
-    - Resposta contém "created file" / "wrote" / "write_file" → tag `WRITE_FILE`
-    - Resposta contém "test" + "pass" → tag `TEST_PASS`
-    - Resposta contém "test" + "fail" → tag `TEST_FAIL`
-    - Resposta contém "P0" ou "P1" → tag `REVIEW_CYCLE`
-    - Resposta contém "screenshot" → tag `SCREENSHOT`
-    - etc.
-  - Resumo: primeiros 150 caracteres da resposta do agente, limpos (sem markdown pesado)
-  - Precisa do feature ID: ler `workflow-state.json` → `feature` field → path `.pi/specs/<feature>/trace.jsonl`
-  - `duration_ms`: calcular desde o último `agent_end` (guardar timestamp no loopState)
-  - **Arquivo modificado:** `extensions/product-loop.ts`
+- [ ] **Criar `extensions/execution-trace.ts`**
+  - Extension separada. Registra handlers:
+    - `agent_end`: ler workflow-state.json → se tem `feature`, extrair resumo + tags → append ao trace.jsonl
+    - `session_start`: restaurar `lastTimestamp` do state entry para calcular `duration_ms`
+  - **Extração de resumo:** últimos 150 chars da resposta do agente, limpos (strip markdown headings, strip tool XML)
+  - **Extração de tags por pattern-matching na resposta:**
+    - Contém "git commit" / "committed" / "Committed" → `COMMIT`
+    - Contém "created file" / "wrote file" / "Write(" → `WRITE_FILE`
+    - Contém "test" + "pass" (case insensitive) → `TEST_PASS`
+    - Contém "test" + "fail" / "error" / "assert" → `TEST_FAIL`
+    - Contém "P0" ou "P1" → `REVIEW_CYCLE`
+    - Contém "screenshot" / "Screenshot" → `SCREENSHOT`
+  - **State persistido via `pi.appendEntry`**: `{ lastTimestamp, turn }`
+  - **Feature ID**: ler `workflow-state.json` → campo `feature` (string). Se não existir, não gravar (projeto sem /setup).
+  - **Caminho do trace**: `.pi/specs/<feature>/trace.jsonl`
+  - **Append seguro**: `fs.appendFileSync(path, JSON.stringify(entry) + "\n")`
+  - **Arquivo novo:** `extensions/execution-trace.ts`
 
 - [ ] **Adicionar trace entries para gates no `ask-tool.ts`**
-  - Quando o operador responde um gate, gravar entry no trace: tag `GATE_APPROVED` ou `GATE_REJECTED`, com a opção escolhida
-  - Precisa do feature ID: ler workflow-state.json
+  - Quando o operador responde um gate, gravar entry no trace: tag `GATE_APPROVED` ou `GATE_REJECTED`, com a opção escolhida no campo `action`
+  - Reutilizar a mesma função de append (extrair helper compartilhado, ou duplicar — são 5 linhas)
+  - Precisa do feature ID: ler workflow-state.json → campo `feature`
   - **Arquivo modificado:** `extensions/ask-tool.ts`
 
-- [ ] **Adicionar trace entry para mudança de fase**
-  - No product-loop, quando `ws.currentPhase !== loopState.phase`: gravar entry com tag `PHASE_CHANGE`
-  - **Arquivo modificado:** `extensions/product-loop.ts`
+- [ ] **Adicionar trace entry para mudança de fase no `execution-trace.ts`**
+  - No handler `agent_end`, comparar `ws.currentPhase` com `lastPhase` (persistido no state)
+  - Se mudou: append entry extra com tag `PHASE_CHANGE`, action = `"Phase: {old} → {new}"`
+  - **Arquivo modificado:** `extensions/execution-trace.ts`
 
-- [ ] **Unit tests para trace recording**
-  - Testar: entry é escrita no arquivo correto, tags são extraídas corretamente, JSONL é válido, append não corrompe entradas anteriores
-  - **Arquivo:** `test/test-product-loop.ts` (adicionar seção de trace tests)
+- [ ] **Atualizar `install.sh` e `uninstall.sh`**
+  - Adicionar symlink para `execution-trace.ts`
+  - **Arquivos modificados:** `install.sh`, `uninstall.sh`
+
+- [ ] **Unit tests para execution-trace**
+  - Testar: entry é escrita no arquivo correto, tags são extraídas corretamente, JSONL é válido (cada linha é JSON parseável), append não corrompe entradas anteriores, duration_ms é calculado, feature ID ausente não causa crash
+  - **Arquivo novo:** `test/test-execution-trace.ts`
 
 ---
 
@@ -390,24 +409,30 @@ O sistema vive neste repo e é instalado em `~/.pi/agent/` via symlinks (`instal
 > **Problema M6:** O widget do TUI mostra "build · turn 4" mas não O QUE o agente está fazendo.
 >
 > **Princípio:** Zero visible bugs — se o agente pode pular verificação, eventualmente vai pular.
+>
+> **Onde vive:** Verificação de transição fica no `product-loop.ts` porque **gata** a decisão do follow-up ("devo avançar ou mandar de volta?"). Widget mais rico também fica no product-loop porque é apresentação do estado que ele já gerencia.
 
 - [ ] **Adicionar verificação de transição de fase no `product-loop.ts`**
   - Quando detecta mudança de fase (`ws.currentPhase !== loopState.phase`):
-    - `build → test`: verificar que pelo menos 1 commit existe na branch (executar `git log --oneline -1` via `execSync`)
-    - `test → review`: verificar que existe arquivo de teste no projeto (glob rápido)
+    - `build → test`: executar `execSync("git log --oneline -1", { cwd })` — se falha ou retorna vazio, verificação falhou
+    - `test → review`: verificar que existe pelo menos um arquivo `*.test.*` ou `tests/` no projeto (glob rápido via `fs.readdirSync` ou `execSync("find . -name '*.test.*' -not -path '*/node_modules/*' | head -1")`)
     - `review → validate`: nenhuma verificação adicional (review já é self-check)
-  - Se verificação falha: NÃO enviar follow-up da nova fase. Em vez disso, enviar: "Você avançou para {fase} mas a verificação falhou: {motivo}. Volte para {fase anterior} e complete o trabalho."
+  - Se verificação **falha**: NÃO enviar follow-up da nova fase. Em vez disso, enviar:
+    `"Você avançou para {fase} mas a verificação falhou: {motivo}. Atualize currentPhase de volta para {fase anterior} e complete o trabalho."`
+  - Se verificação **passa**: fluxo normal — enviar follow-up da nova fase
+  - **Cuidado:** `execSync` pode lançar exceção. Wrap em try/catch — exceção = falha de verificação.
   - **Arquivo modificado:** `extensions/product-loop.ts`
 
 - [ ] **Melhorar TUI widget com info do trace**
   - Atualmente: `🔨 Build: 3/8 ✓ (turn 12)`
   - Proposta: `🔨 Build: 3/8 · COMMIT auth-module (turn 12)`
-  - O widget mostra a última tag + resumo curto do trace (última entrada do trace.jsonl)
+  - Ler última linha do `trace.jsonl` (se existir) → extrair última tag + resumo truncado (≤30 chars)
+  - Se trace não existe (Phase 6 não implementada), manter widget atual — graceful degradation
   - **Arquivo modificado:** `extensions/product-loop.ts`
 
 - [ ] **Unit tests para verificação de transição**
-  - Testar: build→test sem commit falha, build→test com commit permite, teste é skip-able se não tem arquivo de teste
-  - **Arquivo:** `test/test-product-loop.ts`
+  - Testar: build→test sem commit rejeita, build→test com commit aceita, test→review sem arquivo de teste rejeita, execSync exception é tratada como falha
+  - **Arquivo modificado:** `test/test-product-loop.ts` (adicionar seção)
 
 ---
 
@@ -418,19 +443,22 @@ O sistema vive neste repo e é instalado em `~/.pi/agent/` via symlinks (`instal
 > **Problema:** Discovery é a fundação — se falha, tudo downstream quebra. Hoje a profundidade é enforced por prompt ("ZERO suposições"). Mas o agente pode ignorar o prompt e escrever o brief com suposições.
 >
 > **Princípio:** Do one thing well — discovery produz o brief. Se o brief tem suposições, discovery não fez o trabalho.
+>
+> **Onde vive:** Skill change (prompt-level) + product-loop (mechanism-level heuristic). O check de suposições no product-loop gata o follow-up da mesma forma que a verificação de transição (Phase 7) — é decisão de fluxo, não observabilidade.
 
 - [ ] **Adicionar "Assumption Audit" step ao `discovery/SKILL.md`**
-  - Antes de escrever o brief, o agente DEVE listar explicitamente:
-    - "Minhas suposições restantes: [lista]"
-    - Se a lista tem 1+ item → NÃO pode escrever o brief. Deve fazer as perguntas.
-    - Se a lista é vazia → pode escrever
-  - Esse step é entre "entrevista" e "escrita do brief" — um checkpoint interno da skill
+  - Novo passo entre "entrevista" e "escrita do brief":
+    - Listar explicitamente: "Minhas suposições restantes: [lista numerada]"
+    - Se a lista tem 1+ item → NÃO pode escrever o brief. Deve fazer as perguntas que eliminam cada suposição.
+    - Se a lista é vazia → pode prosseguir para escrever o brief
+  - Isso é um checkpoint interno da skill, não uma fase nova
   - **Arquivo modificado:** `skills/discovery/SKILL.md`
 
-- [ ] **Adicionar check no `product-loop.ts` para discovery**
-  - Na fase `init` → `discovery`: quando o agente produz brief.md, o product-loop lê o arquivo
-  - Se brief.md contém palavras como "assumed", "TBD", "to be decided", "assumption" → enviar follow-up: "O brief contém suposições. Volte ao discovery e pergunte ao operador."
-  - Heurística simples, não é LLM — pattern matching em keywords
+- [ ] **Adicionar check de suposições no `product-loop.ts`**
+  - Na fase `discovery`: após `agent_end`, checar se brief.md existe
+  - Se brief.md existe e contém keywords suspeitas: `"assumed"`, `"TBD"`, `"to be decided"`, `"assumption"`, `"we assume"`, `"assuming"` (case insensitive)
+  - Se match: enviar follow-up: `"⚠️ O brief contém suposições (detectado: '{keyword}'). Volte ao discovery e pergunte ao operador antes de prosseguir."`
+  - Heurística simples — pattern matching, não LLM. False positives são ok (agente pode ignorar se for false positive, mas pelo menos é alertado).
   - **Arquivo modificado:** `extensions/product-loop.ts`
 
 ---
@@ -442,6 +470,8 @@ O sistema vive neste repo e é instalado em `~/.pi/agent/` via symlinks (`instal
 > **Problema:** Se o Pi trava no meio do build, a pasta do projeto fica num estado "meio-feito". Não tem como voltar atrás facilmente.
 >
 > **Decisão:** Worktrees completas são para multi-feature (Future). Por agora, implementar **safety checkpoint**: tag do estado limpo antes do build, com instrução de recovery.
+>
+> **Onde vive:** Nas skills (build + publish). Não precisa de extension — é uma instrução de git.
 
 - [ ] **Adicionar safety checkpoint na `build/SKILL.md`**
   - No Step 1 (antes de implementar qualquer task): criar tag `pre-build/<feature>`
@@ -450,9 +480,9 @@ O sistema vive neste repo e é instalado em `~/.pi/agent/` via symlinks (`instal
   - Documentar no skill: "Se o build falhar catastroficamente, o operador pode executar `git reset --hard pre-build/<feature>` para voltar ao estado limpo."
   - **Arquivo modificado:** `skills/build/SKILL.md`
 
-- [ ] **Adicionar instrução de recovery ao `publish/SKILL.md`**
+- [ ] **Adicionar cleanup da tag no `publish/SKILL.md`**
   - No Step 8 (reset workflow): deletar a tag `pre-build/<feature>` — já não é necessária
-  - `git tag -d pre-build/<feature>` (ignore error se tag não existe)
+  - `git tag -d pre-build/<feature> 2>/dev/null || true`
   - **Arquivo modificado:** `skills/publish/SKILL.md`
 
 ---
@@ -465,26 +495,42 @@ O sistema vive neste repo e é instalado em `~/.pi/agent/` via symlinks (`instal
 >
 > **Princípio:** Radical simplicity — o operador decide em 5 segundos. Local and transparent — abre um HTML no browser.
 >
-> **Dependência HARD de Phase 6 (trace) + Phase 7 (tags).** O dashboard lê os dados que eles produzem.
+> **Nova extension: `dashboard.ts`** — NÃO vai no product-loop. Razão: visualizar dados é uma responsabilidade diferente de governar fluxo. Lê `trace.jsonl` (produzido pela execution-trace) + `plan.md` + `workflow-state.json` + screenshots. Gera HTML.
 >
-> ⚠️ **O design deste dashboard será discutido intensamente com o operador. O Vibe Kanban é referência de conceito, NÃO de visual.** O design deve ser pixel-perfect, mínimo, com hierarquia visual clara — o oposto do Vibe Kanban.
+> **Dependência HARD de Phase 6 (trace).** Sem trace, não há timeline para mostrar. Phase 7 (tags) enriquece mas não é blocker.
+>
+> ⚠️ **O design deste dashboard será discutido intensamente com o operador antes de qualquer implementação.** O Vibe Kanban é referência de conceito (painel visual), NÃO de visual (que é cluttered e viola radical simplicity). O design deve ser pixel-perfect, mínimo, com hierarquia visual clara.
 
 - [ ] **Design session com operador**
   - Definir: que informação aparece? qual hierarquia? qual estética?
   - Mockup antes de implementar — não fazer e depois iterar
-  - Input: screenshot do Vibe Kanban como anti-referência + dados disponíveis (trace, plan, workflow-state, screenshots)
-  - Output: mockup aprovado (pode ser sketch, pode ser HTML estático manual)
+  - Input: dados disponíveis (trace.jsonl, plan.md, workflow-state.json, screenshots de validate)
+  - Anti-referência: screenshot do Vibe Kanban — o que NÃO fazer
+  - Output: mockup aprovado (pode ser sketch manual, HTML estático, ou wireframe)
 
-- [ ] **Implementar geração de dashboard**
-  - Gerar `.pi/specs/<feature>/dashboard.html` — arquivo HTML estático, self-contained (CSS inline, dados inline)
-  - Lê: `trace.jsonl` (timeline + tags), `plan.md` (tasks), `workflow-state.json` (phase + progress), screenshots de validate
-  - Gerado pelo `product-loop.ts` em cada `PHASE_CHANGE` (não a cada turn — seria wasteful)
-  - Operador abre no browser quando quiser — zero servidor, zero infra
-  - **Arquivo modificado:** `extensions/product-loop.ts` (novo: função `generateDashboard`)
+- [ ] **Criar `extensions/dashboard.ts`**
+  - Extension separada. Registra handler em `agent_end`:
+    - Ler `workflow-state.json` → checar se `currentPhase` mudou desde última verificação
+    - Se mudou (phase change): regenerar dashboard
+    - Se não mudou: não fazer nada (não gerar a cada turn — wasteful)
+  - **Gerar:** `.pi/specs/<feature>/dashboard.html`
+    - HTML estático, self-contained (CSS inline, dados inline como JSON no `<script>`)
+    - Lê: `trace.jsonl` (timeline + tags), `plan.md` (tasks), `workflow-state.json` (phase + progress)
+    - Screenshots de validate: se existirem em `.pi/specs/<feature>/screenshots/`, embute como base64 ou referencia como paths relativos
+  - Zero servidor, zero infra. Operador abre `open .pi/specs/<feature>/dashboard.html`
+  - **Arquivo novo:** `extensions/dashboard.ts`
+
+- [ ] **Atualizar `install.sh` e `uninstall.sh`**
+  - Adicionar symlink para `dashboard.ts`
+  - **Arquivos modificados:** `install.sh`, `uninstall.sh`
 
 - [ ] **Adicionar link ao dashboard nos gates**
-  - Quando Gate 2 ou Gate 3 é apresentado, mencionar: "Veja o progresso completo em .pi/specs/<id>/dashboard.html"
+  - Quando Gate 2 ou Gate 3 é apresentado, mencionar: "Veja o progresso completo em `.pi/specs/<id>/dashboard.html`"
   - **Arquivos modificados:** `skills/analyze/SKILL.md`, `skills/validate/SKILL.md`
+
+- [ ] **Unit tests para dashboard**
+  - Testar: HTML é gerado corretamente, dados do trace são embutidos, arquivo é self-contained, graceful se trace não existe
+  - **Arquivo novo:** `test/test-dashboard.ts`
 
 ---
 
