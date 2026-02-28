@@ -264,15 +264,53 @@ export default function (pi: ExtensionAPI) {
         return;
       }
 
-      // --- Pre-check: Refuse to overwrite existing project ---
+      // --- Pre-check: Handle existing state ---
       const piDir = path.join(cwd, ".pi");
       const workflowPath = path.join(piDir, "workflow-state.json");
+      const janitorStatePath = path.join(piDir, "janitor-state.json");
+
       if (fs.existsSync(workflowPath)) {
-        ctx.ui.notify(
-          "This project is already initialized (workflow-state.json exists). /setup cannot run again — it would destroy existing state.",
-          "error"
-        );
-        return;
+        if (ctx.hasUI) {
+          const reset = await ctx.ui.confirm(
+            "Projeto já inicializado",
+            "workflow-state.json já existe. Quer resetar o product system e começar do zero?\n\n⚠️ Isso apaga workflow-state.json, feature-list.json, e desativa o janitor se estiver ativo.",
+          );
+          if (!reset) {
+            ctx.ui.notify("Setup cancelado — estado existente preservado.", "info");
+            return;
+          }
+          // Reset: clean all product system state
+          try { fs.unlinkSync(workflowPath); } catch { /* ok */ }
+          try { fs.unlinkSync(path.join(piDir, "feature-list.json")); } catch { /* ok */ }
+          // Deactivate janitor if active
+          if (fs.existsSync(janitorStatePath)) {
+            try {
+              const jState = JSON.parse(fs.readFileSync(janitorStatePath, "utf-8"));
+              if (jState.active) {
+                jState.active = false;
+                jState.phase = "done";
+                fs.writeFileSync(janitorStatePath, JSON.stringify(jState, null, 2));
+              }
+            } catch { /* ok */ }
+          }
+          ctx.ui.notify("Estado anterior limpo. Reinicializando...", "info");
+        } else {
+          // Non-interactive (e.g. PI_AUTO_TEST) — refuse
+          return;
+        }
+      }
+
+      // --- Pre-check: Deactivate janitor if active (even without workflow-state) ---
+      if (fs.existsSync(janitorStatePath)) {
+        try {
+          const jState = JSON.parse(fs.readFileSync(janitorStatePath, "utf-8"));
+          if (jState.active) {
+            jState.active = false;
+            jState.phase = "done";
+            fs.writeFileSync(janitorStatePath, JSON.stringify(jState, null, 2));
+            ctx.ui.notify("Janitor desativado — product system assume.", "info");
+          }
+        } catch { /* ok */ }
       }
 
       // --- Step 1: Git ---

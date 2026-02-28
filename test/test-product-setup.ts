@@ -260,7 +260,7 @@ async function runTests() {
 
 	console.log("\nIdempotency guard:");
 
-	await test("/setup refuses to run in existing project", async () => {
+	await test("/setup refuses to run in existing project (non-interactive)", async () => {
 		const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pi-setup-test-"));
 		const { pi, commands, messages } = createMockPi();
 		productSetup(pi as any);
@@ -280,26 +280,106 @@ async function runTests() {
 		const originalContent = fs.readFileSync(agentsPath, "utf-8");
 		fs.writeFileSync(agentsPath, originalContent + "\n## Product Context\nThis is my product.");
 
-		// Second run — should refuse
-		const notifications: Array<{ msg: string; level: string }> = [];
+		// Second run (non-interactive, no hasUI) — should refuse silently
 		messages.length = 0;
 		await commands["setup"].handler("", {
 			cwd: dir,
-			ui: { notify: (msg: string, level: string) => notifications.push({ msg, level }) },
+			ui: { notify: () => {} },
 		});
 
 		// Should NOT have sent a follow-up message (refused to run)
 		assert.strictEqual(messages.length, 0, "second run should not send follow-up");
 
-		// Should have shown an error notification
-		assert.ok(
-			notifications.some((n) => n.level === "error" && n.msg.includes("already initialized")),
-			"should show error about existing project"
-		);
-
 		// AGENTS.md should NOT be overwritten
 		const afterContent = fs.readFileSync(agentsPath, "utf-8");
 		assert.ok(afterContent.includes("This is my product."), "AGENTS.md should not be overwritten");
+
+		fs.rmSync(dir, { recursive: true, force: true });
+	});
+
+	await test("/setup resets when confirmed (interactive)", async () => {
+		const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pi-setup-test-"));
+		const { pi, commands, messages } = createMockPi();
+		productSetup(pi as any);
+
+		const piAgentDir = path.join(process.env.HOME || "~", ".pi", "agent");
+		if (!fs.existsSync(path.join(piAgentDir, "product-constitution.md"))) {
+			fs.rmSync(dir, { recursive: true, force: true });
+			return;
+		}
+
+		// First run
+		await commands["setup"].handler("", { cwd: dir, ui: { notify: () => {} } });
+
+		// Write a janitor state (active)
+		const piDir = path.join(dir, ".pi");
+		fs.writeFileSync(path.join(piDir, "janitor-state.json"), JSON.stringify({
+			active: true, phase: "executing", buildCmds: [], testCmds: [],
+			baselineErrors: 5, lastErrorCount: 0, currentStep: 1, totalSteps: 2,
+			retriesOnStep: 0, planningRetries: 0, cycleCount: 0,
+		}));
+
+		// Second run (interactive, confirms reset)
+		messages.length = 0;
+		await commands["setup"].handler("", {
+			cwd: dir,
+			hasUI: true,
+			ui: {
+				notify: () => {},
+				confirm: async () => true, // user confirms reset
+			},
+		});
+
+		// Should have sent a follow-up message (reset succeeded)
+		assert.ok(messages.length > 0, "reset run should send follow-up");
+
+		// Janitor should be deactivated
+		const jState = JSON.parse(fs.readFileSync(path.join(piDir, "janitor-state.json"), "utf-8"));
+		assert.strictEqual(jState.active, false, "janitor should be deactivated");
+		assert.strictEqual(jState.phase, "done", "janitor phase should be done");
+
+		fs.rmSync(dir, { recursive: true, force: true });
+	});
+
+	await test("/setup deactivates janitor even without workflow-state", async () => {
+		const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pi-setup-test-"));
+		const { pi, commands, messages } = createMockPi();
+		productSetup(pi as any);
+
+		const piAgentDir = path.join(process.env.HOME || "~", ".pi", "agent");
+		if (!fs.existsSync(path.join(piAgentDir, "product-constitution.md"))) {
+			fs.rmSync(dir, { recursive: true, force: true });
+			return;
+		}
+
+		// No workflow-state, but janitor is active
+		const piDir = path.join(dir, ".pi");
+		fs.mkdirSync(piDir, { recursive: true });
+		fs.writeFileSync(path.join(piDir, "janitor-state.json"), JSON.stringify({
+			active: true, phase: "planning", buildCmds: [], testCmds: [],
+			baselineErrors: 10, lastErrorCount: 10, currentStep: 0, totalSteps: 0,
+			retriesOnStep: 0, planningRetries: 0, cycleCount: 0,
+		}));
+
+		// Run setup — should deactivate janitor and proceed
+		const notifications: Array<{ msg: string; level: string }> = [];
+		await commands["setup"].handler("", {
+			cwd: dir,
+			ui: { notify: (msg: string, level: string) => notifications.push({ msg, level }) },
+		});
+
+		// Should succeed (no workflow-state blocking it)
+		assert.ok(messages.length > 0, "should proceed with setup");
+
+		// Janitor should be deactivated
+		const jState = JSON.parse(fs.readFileSync(path.join(piDir, "janitor-state.json"), "utf-8"));
+		assert.strictEqual(jState.active, false, "janitor should be deactivated");
+
+		// Should have notified about janitor deactivation
+		assert.ok(
+			notifications.some(n => n.msg.includes("Janitor desativado")),
+			"should notify about janitor deactivation"
+		);
 
 		fs.rmSync(dir, { recursive: true, force: true });
 	});
