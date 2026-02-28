@@ -330,6 +330,123 @@ O sistema vive neste repo e é instalado em `~/.pi/agent/` via symlinks (`instal
 
 ---
 
+## V2.4 — Confiança e Visibilidade (2026-02-27)
+
+> **Problema real:** tudo acontece debaixo do capô. Não é fácil saber se estamos indo na direção certa sem ler dezenas de arquivos. E não há garantia de que Feature B não quebra Feature A.
+>
+> **Princípio:** Radical simplicity. Essas mudanças são instruções em skills — zero código novo.
+>
+> **Regra:** executar na ordem. Regressão é a fundação de confiança.
+
+### Phase 5.1 — Regressão
+
+> **Problema:** Quando o agente constrói Feature B, não roda os testes de Feature A. Se algo quebrou, ninguém sabe até abrir o app. É isso que destrói a confiança ao adicionar features.
+>
+> **Solução:** Rodar TODOS os testes do projeto, sempre. Antes de implementar e depois de implementar.
+
+- [ ] **Adicionar baseline check no `build/SKILL.md`**
+  - Novo Step 0 (antes de implementar qualquer task):
+    - "Rode todos os testes existentes no projeto (`npm test`, `node --test`, ou o runner configurado). Se algum teste falha, conserte ANTES de implementar qualquer task nova. O main deve estar verde antes de você tocar em qualquer coisa."
+  - **Arquivo modificado:** `skills/build/SKILL.md`
+
+- [ ] **Atualizar `test/SKILL.md` para rodar TODOS os testes**
+  - Instrução explícita: "Rode TODOS os testes do projeto, não apenas os testes da feature atual. Regressão é tão importante quanto os testes novos. Se um teste antigo quebrou, é sua responsabilidade consertar."
+  - **Arquivo modificado:** `skills/test/SKILL.md`
+
+---
+
+### Phase 5.2 — Progress.md (visibilidade durante o build)
+
+> **Problema:** Entre Gate 2 e Gate 3, o operador não tem como saber o que está acontecendo sem perguntar ao agente ou ler git log. Quer abrir UM arquivo e saber em 30 segundos: onde está, o que foi feito, o que falta.
+>
+> **Solução:** O agente atualiza `.pi/specs/<feature>/progress.md` após cada task do build.
+
+- [ ] **Adicionar instrução no `build/SKILL.md`**
+  - Após completar cada task (depois do commit), atualizar `.pi/specs/<feature>/progress.md`:
+    ```markdown
+    # <nome do produto> — Progresso
+
+    ## O que estamos construindo
+    <1-2 frases do brief.md>
+
+    ## Progresso
+    ✅ 1. <task 1 — descrição curta>
+    ✅ 2. <task 2 — descrição curta>
+    🔨 3. <task 3 — descrição curta> ← agora
+    ⬜ 4. <task 4 — descrição curta>
+    ⬜ 5. <task 5 — descrição curta>
+
+    ## O que acabou de acontecer
+    <2-3 frases sobre o que foi implementado no último task>
+
+    ## Decisões técnicas
+    - <decisão 1 e por quê>
+    - <decisão 2 e por quê>
+    ```
+  - Escrever em português (o operador é brasileiro).
+  - Manter curto — o objetivo é 30 segundos de leitura, não documentação.
+  - **Arquivo modificado:** `skills/build/SKILL.md`
+
+- [ ] **Criar progress.md no `/setup`**
+  - Adicionar ao template do `product-setup/index.ts`: criar `.pi/specs/<feature>/progress.md` com conteúdo inicial:
+    ```markdown
+    # <nome> — Progresso
+
+    Aguardando início do build.
+    ```
+  - **Arquivo modificado:** `extensions/product-setup/index.ts`
+
+---
+
+### Phase 5.3 — Backlog (feature-list.json como fila real)
+
+> **Problema:** `feature-list.json` existe mas é write-only. Não funciona como backlog — não tem prioridade, não orienta "o que fazer depois", não conecta features entre si.
+>
+> **Solução:** Transformar em backlog real. Operador prioriza. Agente pega da fila.
+
+- [ ] **Definir schema do backlog**
+  - `feature-list.json` passa a ser array ordenado (posição = prioridade):
+    ```json
+    [
+      {
+        "id": "proposal-generator",
+        "name": "Gerador de Propostas",
+        "status": "done",
+        "brief": ".pi/specs/proposal-generator/brief.md"
+      },
+      {
+        "id": "proposal-history",
+        "name": "Histórico de Propostas",
+        "status": "in-progress",
+        "brief": ".pi/specs/proposal-history/brief.md"
+      },
+      {
+        "id": "client-management",
+        "name": "Gestão de Clientes",
+        "status": "backlog",
+        "brief": null
+      }
+    ]
+    ```
+  - Status possíveis: `backlog` (ideia), `in-progress` (sendo construída), `done` (publicada)
+  - Ordenação = prioridade (o operador pode reordenar)
+
+- [ ] **Atualizar `discovery/SKILL.md`**
+  - No Step 0: ler `feature-list.json`. Se a feature sendo descoberta já existe como `backlog`, atualizar status para `in-progress`. Se não existe, adicionar.
+  - **Arquivo modificado:** `skills/discovery/SKILL.md`
+
+- [ ] **Atualizar `publish/SKILL.md`**
+  - No Step 8 (reset): atualizar status da feature para `done` no `feature-list.json`.
+  - Já faz algo parecido (audit fix #8) — alinhar com o novo schema.
+  - **Arquivo modificado:** `skills/publish/SKILL.md`
+
+- [ ] **Atualizar `product-setup/index.ts`**
+  - `/setup` cria `feature-list.json` como array vazio `[]` (se não existir).
+  - Se já existe, não sobrescreve (idempotência — já implementada no audit fix #1).
+  - **Arquivo modificado:** `extensions/product-setup/index.ts`
+
+---
+
 ## V3 — Observabilidade (2026-02-27)
 
 > **Princípio:** Radical simplicity. O trace grava. O summary mostra. Você lê e decide.
