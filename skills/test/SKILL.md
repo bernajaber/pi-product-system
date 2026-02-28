@@ -49,15 +49,22 @@ For static HTML/JS apps: parse the HTML, simulate interactions via JS/DOM, asser
 For apps with logic: test the logic functions directly.
 For apps that are purely visual with no testable logic: validate HTML files exist, are well-formed, and contain expected content.
 
-### Step 4: Run tests
+### Step 4: Run ALL tests
 
-Run the tests:
+Run the new tests AND all existing tests from previous features:
 ```bash
+# Run ALL test files, not just the current feature
 node tests/<feature>.test.js
+# Also run any other test files that exist
+ls tests/*.test.* 2>/dev/null | while read f; do node "$f"; done
 ```
 
-- **If tests pass:** Update progress to `{ task: 1, of: 1, status: "ok" }` — marks test phase as complete. The product-loop will trigger the transition to review.
-- **If tests fail:** Read the error output, fix the issue (it might be in the code, not the test), and run again. Update progress status to `"stuck"` if you can't get them to pass after a reasonable attempt.
+**IMPORTANT: Regression is as important as new tests.** If a previous feature's test breaks, that means the new code damaged something. Fix it before proceeding.
+
+- **If ALL tests pass (new + old):** Update progress to `{ task: 1, of: 1, status: "ok" }` — marks test phase as complete. The product-loop will trigger the transition to review.
+- **If new tests fail:** Read the error output, fix the issue (it might be in the code, not the test), and run again.
+- **If OLD tests fail:** The new feature broke something. Fix the regression — do NOT skip old tests.
+- Update progress status to `"stuck"` if you can't get them to pass after a reasonable attempt.
 
 ### Step 5: Commit passing tests
 

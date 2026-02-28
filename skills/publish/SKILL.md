@@ -110,6 +110,9 @@ git tag v<new-version>
 
 Versioning: patch for simple features, minor for medium, major for breaking changes.
 
+**feature-list.json** — mark feature as done:
+- Read `.pi/feature-list.json`, find the entry with the current feature ID, set `"status": "done"`. Write back.
+
 **workflow-state.json** — reset for next cycle:
 ```json
 {

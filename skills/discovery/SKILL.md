@@ -43,6 +43,11 @@ Update `workflow-state.json`:
 
 Both fields must be set now. The feature ID must survive compaction — it cannot live only in conversation context.
 
+Update `.pi/feature-list.json` (the project backlog):
+- Read the file. If the feature ID already exists with status `"backlog"`, update its status to `"in-progress"`.
+- If the feature ID doesn't exist, add it: `{ "id": "<id>", "name": "<product name>", "status": "in-progress", "brief": ".pi/specs/<id>/brief.md" }`
+- Write the file back. Preserve ordering — position = priority.
+
 ### Step 1: Listen
 
 The operator describes what they want. Don't interrupt. Absorb the full picture.

@@ -304,6 +304,12 @@ export default function (pi: ExtensionAPI) {
         fs.writeFileSync(gitignorePath, GITIGNORE);
       }
 
+      // feature-list.json — backlog of all features (ordered = prioritized)
+      const featureListPath = path.join(piDir, "feature-list.json");
+      if (!fs.existsSync(featureListPath)) {
+        fs.writeFileSync(featureListPath, "[]\n");
+      }
+
       // --- Step 4: Initial commit ---
       execSync("git add -A", { cwd });
       try {
