@@ -36,23 +36,35 @@ Then `/setup` to start building features on a stable foundation.
 
 ## Install
 
-```bash
-git clone https://github.com/bernajaber/pi-product-system.git ~/pi-product-system-repo
-cd ~/pi-product-system-repo
-./install.sh
+**For LLM agents** — paste this into a Pi session inside your project:
+```
+Fetch and follow: https://raw.githubusercontent.com/bernajaber/pi-product-system/main/INSTALL.md
 ```
 
-This creates symlinks from the repo to `~/.pi/agent/` — Pi loads them globally.
+**Manual** — from inside your project directory:
+```bash
+TMPDIR=$(mktemp -d)
+git clone --depth 1 https://github.com/bernajaber/pi-product-system.git "$TMPDIR/ps"
+bash "$TMPDIR/ps/install.sh"
+rm -rf "$TMPDIR"
+```
+
+This copies skills, extensions, and agents to `.pi/` of the **current project** (local, not global).
 
 ## Usage
 
 ```bash
-mkdir ~/my-product
-cd ~/my-product
+cd ~/my-project
 pi
 ```
 
 Then type `/setup`. The system initializes and asks: "O que você quer construir?"
+
+## Uninstall
+
+```bash
+bash .pi/uninstall-product-system.sh
+```
 
 ## Architecture (V2)
 

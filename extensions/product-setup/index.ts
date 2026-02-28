@@ -250,15 +250,17 @@ export default function (pi: ExtensionAPI) {
       const cwd = ctx.cwd;
 
       // --- Pre-check: Product Constitution must exist ---
-      const constitutionPath = path.join(
+      // Check local (.pi/ of project) first, then global (~/.pi/agent/)
+      const localConstitution = path.join(cwd, ".pi", "product-constitution.md");
+      const globalConstitution = path.join(
         process.env.HOME || "~",
         ".pi",
         "agent",
         "product-constitution.md"
       );
-      if (!fs.existsSync(constitutionPath)) {
+      if (!fs.existsSync(localConstitution) && !fs.existsSync(globalConstitution)) {
         ctx.ui.notify(
-          "Product Constitution not found at ~/.pi/agent/product-constitution.md. Run the system setup first.",
+          "Product Constitution not found. Install the product system first:\nbash /path/to/pi-product-system/install.sh",
           "error"
         );
         return;

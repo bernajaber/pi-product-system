@@ -56,6 +56,16 @@ async function runTests() {
 	const mod = await import("../extensions/product-setup/index.ts");
 	const productSetup = mod.default;
 
+	// Helper: create a temp project dir with product-constitution.md pre-installed
+	// (simulates local install — product-setup checks for this file)
+	function createTestProject(): string {
+		const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pi-setup-test-"));
+		const piDir = path.join(dir, ".pi");
+		fs.mkdirSync(piDir, { recursive: true });
+		fs.writeFileSync(path.join(piDir, "product-constitution.md"), "# Test Constitution\n");
+		return dir;
+	}
+
 	console.log("\n═══ product-setup unit tests ═══\n");
 
 	console.log("Registration:");
@@ -71,18 +81,9 @@ async function runTests() {
 	console.log("\nFile creation:");
 
 	await test("/setup creates all required files", async () => {
-		const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pi-setup-test-"));
+		const dir = createTestProject();
 		const { pi, commands, messages } = createMockPi();
 		productSetup(pi as any);
-
-		// Need product-constitution.md to exist
-		const piAgentDir = path.join(process.env.HOME || "~", ".pi", "agent");
-		const constitutionExists = fs.existsSync(path.join(piAgentDir, "product-constitution.md"));
-		if (!constitutionExists) {
-			console.log("    ⚠️  Skipping: product-constitution.md not found at ~/.pi/agent/");
-			fs.rmSync(dir, { recursive: true, force: true });
-			return;
-		}
 
 		const mockCtx = {
 			cwd: dir,
@@ -114,15 +115,9 @@ async function runTests() {
 	});
 
 	await test("AGENTS.md has V2 workflow with 9 phases", async () => {
-		const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pi-setup-test-"));
+		const dir = createTestProject();
 		const { pi, commands } = createMockPi();
 		productSetup(pi as any);
-
-		const piAgentDir = path.join(process.env.HOME || "~", ".pi", "agent");
-		if (!fs.existsSync(path.join(piAgentDir, "product-constitution.md"))) {
-			fs.rmSync(dir, { recursive: true, force: true });
-			return;
-		}
 
 		await commands["setup"].handler("", { cwd: dir, ui: { notify: () => {} } });
 
@@ -151,15 +146,9 @@ async function runTests() {
 	});
 
 	await test("workflow-state.json has V2 schema", async () => {
-		const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pi-setup-test-"));
+		const dir = createTestProject();
 		const { pi, commands } = createMockPi();
 		productSetup(pi as any);
-
-		const piAgentDir = path.join(process.env.HOME || "~", ".pi", "agent");
-		if (!fs.existsSync(path.join(piAgentDir, "product-constitution.md"))) {
-			fs.rmSync(dir, { recursive: true, force: true });
-			return;
-		}
 
 		await commands["setup"].handler("", { cwd: dir, ui: { notify: () => {} } });
 
@@ -185,15 +174,9 @@ async function runTests() {
 	});
 
 	await test("REVIEW_GUIDELINES.md has plan skill marker", async () => {
-		const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pi-setup-test-"));
+		const dir = createTestProject();
 		const { pi, commands } = createMockPi();
 		productSetup(pi as any);
-
-		const piAgentDir = path.join(process.env.HOME || "~", ".pi", "agent");
-		if (!fs.existsSync(path.join(piAgentDir, "product-constitution.md"))) {
-			fs.rmSync(dir, { recursive: true, force: true });
-			return;
-		}
 
 		await commands["setup"].handler("", { cwd: dir, ui: { notify: () => {} } });
 
@@ -213,15 +196,9 @@ async function runTests() {
 	});
 
 	await test("sendMessage is called with correct contract", async () => {
-		const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pi-setup-test-"));
+		const dir = createTestProject();
 		const { pi, commands, messages } = createMockPi();
 		productSetup(pi as any);
-
-		const piAgentDir = path.join(process.env.HOME || "~", ".pi", "agent");
-		if (!fs.existsSync(path.join(piAgentDir, "product-constitution.md"))) {
-			fs.rmSync(dir, { recursive: true, force: true });
-			return;
-		}
 
 		await commands["setup"].handler("", { cwd: dir, ui: { notify: () => {} } });
 
@@ -237,18 +214,12 @@ async function runTests() {
 	});
 
 	await test("/setup doesn't overwrite existing .gitignore", async () => {
-		const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pi-setup-test-"));
+		const dir = createTestProject();
 		const customGitignore = "# My custom gitignore\n*.log\n";
 		fs.writeFileSync(path.join(dir, ".gitignore"), customGitignore);
 
 		const { pi, commands } = createMockPi();
 		productSetup(pi as any);
-
-		const piAgentDir = path.join(process.env.HOME || "~", ".pi", "agent");
-		if (!fs.existsSync(path.join(piAgentDir, "product-constitution.md"))) {
-			fs.rmSync(dir, { recursive: true, force: true });
-			return;
-		}
 
 		await commands["setup"].handler("", { cwd: dir, ui: { notify: () => {} } });
 
@@ -261,15 +232,9 @@ async function runTests() {
 	console.log("\nIdempotency guard:");
 
 	await test("/setup refuses to run in existing project (non-interactive)", async () => {
-		const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pi-setup-test-"));
+		const dir = createTestProject();
 		const { pi, commands, messages } = createMockPi();
 		productSetup(pi as any);
-
-		const piAgentDir = path.join(process.env.HOME || "~", ".pi", "agent");
-		if (!fs.existsSync(path.join(piAgentDir, "product-constitution.md"))) {
-			fs.rmSync(dir, { recursive: true, force: true });
-			return;
-		}
 
 		// First run — should succeed
 		await commands["setup"].handler("", { cwd: dir, ui: { notify: () => {} } });
@@ -298,15 +263,9 @@ async function runTests() {
 	});
 
 	await test("/setup resets when confirmed (interactive)", async () => {
-		const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pi-setup-test-"));
+		const dir = createTestProject();
 		const { pi, commands, messages } = createMockPi();
 		productSetup(pi as any);
-
-		const piAgentDir = path.join(process.env.HOME || "~", ".pi", "agent");
-		if (!fs.existsSync(path.join(piAgentDir, "product-constitution.md"))) {
-			fs.rmSync(dir, { recursive: true, force: true });
-			return;
-		}
 
 		// First run
 		await commands["setup"].handler("", { cwd: dir, ui: { notify: () => {} } });
@@ -342,15 +301,9 @@ async function runTests() {
 	});
 
 	await test("/setup deactivates janitor even without workflow-state", async () => {
-		const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pi-setup-test-"));
+		const dir = createTestProject();
 		const { pi, commands, messages } = createMockPi();
 		productSetup(pi as any);
-
-		const piAgentDir = path.join(process.env.HOME || "~", ".pi", "agent");
-		if (!fs.existsSync(path.join(piAgentDir, "product-constitution.md"))) {
-			fs.rmSync(dir, { recursive: true, force: true });
-			return;
-		}
 
 		// No workflow-state, but janitor is active
 		const piDir = path.join(dir, ".pi");
