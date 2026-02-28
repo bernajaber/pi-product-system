@@ -4,6 +4,8 @@ A product creation system for the [Pi coding agent](https://github.com/badlogic/
 
 ## How it works
 
+**Greenfield** — new product from scratch:
+
 ```
 You: "Quero criar um app de lista de compras compartilhado"
 
@@ -17,6 +19,20 @@ You: "Quero criar um app de lista de compras compartilhado"
 ```
 
 You make 3 decisions. The system does everything else.
+
+**Brownfield** — stabilize an existing broken project:
+
+```
+You: /janitor
+
+→ Scan (auto-detects stack, runs build + tests, counts errors)
+→ Plan (LLM analyzes ALL errors, groups by root cause, creates plan)
+→ Execute (one step at a time, extension verifies after each)
+→ Verify (final build + test check)
+→ Triage (report of what's left for the product system)
+```
+
+Then `/setup` to start building features on a stable foundation.
 
 ## Install
 
@@ -40,7 +56,7 @@ Then type `/setup`. The system initializes and asks: "O que você quer construir
 
 ## Architecture (V2)
 
-9 skills, each with one input → one output:
+9 product skills + 1 stabilization skill, each with one input → one output:
 
 | Skill | Output | What it does |
 |-------|--------|-------------|
@@ -53,6 +69,7 @@ Then type `/setup`. The system initializes and asks: "O que você quer construir
 | `review` | clean code | Code → quality check (UX, visual, constitution) |
 | `validate` | evidence | Browser verification → screenshots → Gate 3 |
 | `publish` | release | PR + merge + tag + changelog + reset |
+| `janitor` | stable build | Broken codebase → compiles, tests pass |
 
 ### Quality loops
 
@@ -73,14 +90,35 @@ Then type `/setup`. The system initializes and asks: "O que você quer construir
 ## Repo structure
 
 ```
-skills/           → 9 workflow skills (SKILL.md each)
-extensions/       → /setup command + ask tool for gates
+skills/           → 9 product skills + janitor (SKILL.md / GUIDE.md)
+extensions/       → product-loop, /setup, ask tool, /janitor
 agents/           → sub-agents: scout, spec-checker
 product-constitution.md  → operator's product principles
 REVIEW_GUIDELINES.md     → V2 review criteria (P0-P3)
 docs/ARCHITECTURE-V2.md  → complete V2 specification
 docs/PARA-BERNARDO.md    → non-technical guide for the operator
 ```
+
+## Janitor (`/janitor`)
+
+The janitor stabilizes broken or messy codebases so the product system can take over.
+
+**How it works:**
+
+1. **Scan** — detects stack (Rust, Node, Go, Python, Java, C/C++, Swift), runs build + tests
+2. **Plan** — LLM reads ALL build output, identifies root causes, creates `janitor-plan.md` with Impact lines
+3. **Execute** — one step at a time; extension verifies after each step (errors must decrease for `fix`, can't increase for `clean`/`organize`)
+4. **Verify** — final build + test check; if issues remain, new cycle (max 3)
+5. **Triage** — LLM writes `janitor-triage.md` with remaining concerns for the product system
+
+**Design principles:**
+
+- **Extension = mechanics** (run build, count errors, verify progress)
+- **LLM = understanding** (extract errors, identify root causes, write fixes)
+- The extension never trusts the agent's "I'm done" — it runs the build and checks
+- Plan coverage validation: rejects plans that don't account for ≥70% of errors
+- Separate from product-loop — different concern, different lifecycle, different state
+- Won't start if product-loop is active (conflict prevention)
 
 ## Design principles
 
@@ -105,12 +143,13 @@ Removes all symlinks. Pi works normally without the product system.
 
 ## Testing
 
-### Unit tests (37 tests, ~2 seconds)
+### Unit tests (85 tests, ~2 seconds)
 
-Tests the logic of all 3 extensions with mocks — no pi session needed.
+Tests the logic of all 4 extensions with mocks — no pi session needed.
 
 ```bash
 cd ~/pi-product-system-repo
+node --experimental-strip-types test/test-janitor.ts        # 48 tests
 node --experimental-strip-types test/test-product-loop.ts   # 23 tests
 node --experimental-strip-types test/test-product-setup.ts  # 8 tests
 node --experimental-strip-types test/test-ask-tool.ts       # 6 tests

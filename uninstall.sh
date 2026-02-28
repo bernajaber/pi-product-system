@@ -21,8 +21,8 @@ remove_link() {
   fi
 }
 
-# Skills (V2 — 9 skills)
-for skill in discovery specify plan analyze build test review validate publish; do
+# Skills (V2 — 9 skills + janitor)
+for skill in discovery specify plan analyze build test review validate publish janitor; do
   remove_link "$PI_DIR/skills/$skill" "skills/$skill"
 done
 
@@ -38,6 +38,7 @@ done
 remove_link "$PI_DIR/extensions/product-setup" "extensions/product-setup"
 remove_link "$PI_DIR/extensions/ask-tool.ts" "extensions/ask-tool.ts"
 remove_link "$PI_DIR/extensions/product-loop.ts" "extensions/product-loop.ts"
+remove_link "$PI_DIR/extensions/janitor.ts" "extensions/janitor.ts"
 
 # Agents
 for agent in scout.md spec-checker.md; do

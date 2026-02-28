@@ -1,5 +1,34 @@
 # Changelog
 
+## v2.5.0 — 2026-02-28
+
+### Added
+- **Janitor extension** (`/janitor`) — stabilizes broken/messy codebases before the product system takes over
+  - 4-phase state machine: scanning → planning → executing → verifying → done
+  - Mechanical verification: extension runs build after each step, checks error count
+  - Plan coverage validation: rejects plans that don't account for ≥70% of errors
+  - Auto-skip: when build passes, remaining `fix` steps are skipped automatically
+  - Path fallback: if agent writes plan to wrong path, extension finds and moves it
+  - Conflict prevention: refuses to start if product-loop is active
+  - Max 3 full cycles, 3 retries per step, 3 planning attempts
+  - Widget shows phase, step, error count, turn count
+  - Compaction-safe: preserves state across context window resets
+- **Janitor skill** (`skills/janitor/GUIDE.md`) — instructions for the agent during janitor execution
+  - Plan format with Impact lines and Coverage summary
+  - Execution rules: run build before committing, one step = one commit
+  - 3 step categories: clean (errors can't increase), fix (must decrease), organize (can't increase)
+  - Triage template for post-janitor assessment
+- **Universal stack detection** — Go (go.mod), Java/Maven (pom.xml), Gradle (build.gradle), C/C++ (CMake/Make), Swift (Package.swift), yarn
+- **Subdirectory detection** — finds Cargo.toml, tauri.conf.json one level deep (Tauri, workspace projects)
+- **48 janitor unit tests** — countErrors, parseSteps, verifyStep, detectStack (12 stacks), extractErrorLines, validatePlanCoverage, state management
+
+### Design decisions
+- Extension handles mechanics (run build, count errors, verify); LLM handles understanding (extract errors, identify root causes, fix)
+- Error counting is universal (`/^error/i` + summary fallback) — not language-specific
+- Janitor is separate from product-loop: different concern, different lifecycle, different state file
+- Agent cannot declare completion — extension verifies mechanically
+- Janitor does NOT write tests — that's the product system's job (`test` skill)
+
 ## v2.3.1 — 2026-02-27
 
 ### Fixed
