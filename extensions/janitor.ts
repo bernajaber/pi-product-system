@@ -262,10 +262,6 @@ function countErrors(output: string): number {
 }
 
 /**
- * Extract individual error lines from build output.
- * Returns clean, numbered list so the agent can't miss any.
- */
-/**
  * Rough error counting for mechanical verification.
  * NOT meant to be exhaustive — the LLM handles detailed error extraction.
  * This just gives the extension a number to track progress between steps.
