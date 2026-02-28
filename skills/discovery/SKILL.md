@@ -48,6 +48,17 @@ Update `.pi/feature-list.json` (the project backlog):
 - If the feature ID doesn't exist, add it: `{ "id": "<id>", "name": "<product name>", "status": "in-progress", "brief": ".pi/specs/<id>/brief.md" }`
 - Write the file back. Preserve ordering — position = priority.
 
+### Step 0.5: Read prior context (if exists)
+
+Check if `.pi/prior-context.md` exists. If it does:
+1. Read it — it contains context from before the product system was initialized
+2. Read any documents it references (e.g., `PRODUCT.md`, existing code)
+3. Use this as CONTEXT for your interview — not as the answer
+4. Your job is still to validate with the operator: what's still true? what changed? what's missing?
+5. Go DEEPER than the prior context, not shallower — you have a head start, use it to ask better questions
+
+If prior context doesn't exist, skip this step.
+
 ### Step 1: Listen
 
 The operator describes what they want. Don't interrupt. Absorb the full picture.
